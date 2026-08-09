@@ -1,5 +1,5 @@
 # ---- Production Dockerfile for Laravel 11 Backend on Render ----
-FROM php:8.3-cli-alpine
+FROM php:8.4-cli-alpine
 
 # Install system dependencies & PHP extensions
 RUN apk add --no-cache \
@@ -23,8 +23,8 @@ WORKDIR /app
 # Copy application source
 COPY . .
 
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Install PHP dependencies with platform fallback
+RUN composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs
 
 # Create SQLite database if not exists & set permissions
 RUN touch /app/database/database.sqlite && chmod -R 777 /app/storage /app/bootstrap/cache /app/database
