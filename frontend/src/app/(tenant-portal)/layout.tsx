@@ -5,13 +5,18 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Home, Receipt, Wrench, LogOut, Loader2, UserCheck } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { Home, Receipt, Wrench, LogOut, Loader2, UserCheck, ArrowLeft, Building2 } from "lucide-react";
 
 export default function TenantPortalLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, isLoading: isLoadingAuth, logout } = useAuth();
-  const [mounted] = useState(() => typeof window !== "undefined");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (mounted && !isLoadingAuth && !isAuthenticated) {
@@ -21,10 +26,10 @@ export default function TenantPortalLayout({ children }: { children: ReactNode }
 
   if (!mounted || isLoadingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
         <div className="text-center space-y-3">
           <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground font-medium">Loading Tenant Portal...</p>
+          <p className="text-sm text-muted-foreground font-medium">Loading BashaBari Tenant Portal...</p>
         </div>
       </div>
     );
@@ -37,21 +42,32 @@ export default function TenantPortalLayout({ children }: { children: ReactNode }
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* ---- Top Header ---- */}
       <header className="h-16 border-b border-border bg-card px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40 shadow-xs">
-        <Link href="/tenant-portal" className="flex items-center gap-2 font-bold text-lg text-primary">
-          <span className="bg-primary text-primary-foreground w-8 h-8 rounded-lg flex items-center justify-center text-sm shadow-sm">
-            🏠
-          </span>
-          <span>Bariwala Hub Tenant Portal</span>
-        </Link>
-
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground font-semibold">
-            <UserCheck className="w-4 h-4 text-emerald-600" />
+          <Link href="/" className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors mr-2">
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">Back to</span> Main Site
+          </Link>
+
+          <div className="h-4 w-[1px] bg-border hidden sm:block" />
+
+          <Link href="/tenant-portal" className="flex items-center gap-2 font-bold text-base sm:text-lg text-primary">
+            <span className="bg-primary text-primary-foreground w-8 h-8 rounded-lg flex items-center justify-center text-sm shadow-sm shrink-0">
+              🏠
+            </span>
+            <span className="tracking-tight">BashaBari Tenant Portal</span>
+          </Link>
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground font-semibold bg-accent/50 px-2.5 py-1 rounded-md border border-border">
+            <UserCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>{user?.name}</span>
           </div>
+
+          <ThemeToggle />
 
           <Button variant="outline" size="sm" onClick={() => logout()} className="text-xs font-semibold">
             <LogOut className="w-3.5 h-3.5 mr-1" /> Logout
@@ -81,6 +97,16 @@ export default function TenantPortalLayout({ children }: { children: ReactNode }
               </Link>
             );
           })}
+          
+          <div className="hidden md:block pt-4 mt-auto border-t border-border">
+            <Link
+              href="/"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all font-medium"
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>BashaBari Homepage</span>
+            </Link>
+          </div>
         </aside>
 
         {/* Content Area */}

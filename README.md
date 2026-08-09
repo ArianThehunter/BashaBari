@@ -1,8 +1,8 @@
-# Bariwala Hub
+# BashaBari
 
 **All-in-one property operations and financial management SaaS for Bangladesh.**
 
-Bariwala Hub consolidates property management, tenant lifecycle, rent collection, utility billing, expense tracking, maintenance management, and financial reporting into a single modern platform.
+BashaBari consolidates property management, tenant lifecycle, rent collection, utility billing, expense tracking, maintenance management, and financial reporting into a single modern platform.
 
 ---
 

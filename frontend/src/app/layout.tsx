@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Geist_Mono } from "next/font/google";
 import { QueryProvider } from "@/providers/query-provider";
+import { ThemeProvider } from "@/providers/theme-provider";
 import "./globals.css";
 
 const inter = Inter({
@@ -18,26 +19,30 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Bariwala Hub",
-    template: "%s | Bariwala Hub",
+    default: "BashaBari | Property Operations Platform for Bangladesh",
+    template: "%s | BashaBari",
   },
   description:
-    "All-in-one property operations and financial management platform for Bangladesh. Manage properties, tenants, rent, utilities, expenses, and more.",
+    "All-in-one property operations and financial management platform for Bangladesh. Manage properties, tenants, rent, sub-meter utilities, expenses, and legal contracts.",
   keywords: [
+    "BashaBari",
     "property management",
     "rent management",
     "tenant management",
     "Bangladesh",
     "landlord",
     "bariwala",
-    "utility billing",
+    "sub-meter utility billing",
+    "DPDC",
+    "DESCO",
+    "DWASA",
     "expense tracking",
   ],
-  authors: [{ name: "Bariwala Hub" }],
+  authors: [{ name: "BashaBari" }],
   openGraph: {
-    title: "Bariwala Hub",
+    title: "BashaBari | Property Operations Platform for Bangladesh",
     description:
-      "All-in-one property operations and financial management platform",
+      "All-in-one property operations and financial management platform for Bangladesh",
     type: "website",
     locale: "en_BD",
   },
@@ -58,14 +63,14 @@ export default function RootLayout({
       className={`${inter.variable} ${geistMono.variable} h-full`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col antialiased">
+      <body className="min-h-full flex flex-col antialiased bg-background text-foreground selection:bg-primary selection:text-white">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "SoftwareApplication",
-              name: "Bariwala Hub",
+              name: "BashaBari",
               applicationCategory: "BusinessApplication",
               operatingSystem: "Web",
               description: "All-in-one property operations and financial management platform for Bangladesh.",
@@ -73,13 +78,15 @@ export default function RootLayout({
                 "@type": "AggregateOffer",
                 priceCurrency: "BDT",
                 lowPrice: "999",
-                highPrice: "1499",
+                highPrice: "2499",
                 offerCount: "2",
               },
             }),
           }}
         />
-        <QueryProvider>{children}</QueryProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <QueryProvider>{children}</QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

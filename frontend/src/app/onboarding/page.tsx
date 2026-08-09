@@ -57,7 +57,7 @@ export default function OnboardingPage() {
           <Sparkles className="w-6 h-6" />
         </div>
         <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-          Welcome to Bariwala Hub
+          Welcome to BashaBari
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Let&apos;s create your property management organization to get started

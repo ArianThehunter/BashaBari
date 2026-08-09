@@ -81,7 +81,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
         <div className="text-center space-y-3">
           <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground font-medium">Loading Bariwala Hub...</p>
+          <p className="text-sm text-muted-foreground font-medium">Loading BashaBari...</p>
         </div>
       </div>
     );

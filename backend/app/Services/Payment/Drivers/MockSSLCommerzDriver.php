@@ -26,7 +26,7 @@ class MockSSLCommerzDriver implements PaymentGatewayInterface
             'gateway_url' => $gatewayUrl,
             'amount_bdt' => $invoice->due_amount / 100,
             'currency' => 'BDT',
-            'store_id' => config('services.sslcommerz.store_id', 'bariwalahub_mock_store'),
+            'store_id' => config('services.sslcommerz.store_id', 'bashabari_mock_store'),
         ];
     }
 
