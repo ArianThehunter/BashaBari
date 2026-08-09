@@ -44,37 +44,7 @@ See [docs/setup.md](docs/setup.md) for detailed installation instructions.
 - Redis 7+
 - Git
 
-## Quick Start
 
-```bash
-# 1. Clone the repository
-git clone <repository-url>
-cd bariwala-hub
-
-# 2. Backend setup
-cd backend
-composer install
-cp .env.example .env
-php artisan key:generate
-php artisan migrate --seed
-cd ..
-
-# 3. Frontend setup
-cd frontend
-npm install
-cp .env.example .env.local
-cd ..
-
-# 4. Start services (ensure PostgreSQL and Redis are running)
-# Terminal 1 — Backend
-cd backend && php artisan serve
-
-# Terminal 2 — Queue Worker
-cd backend && php artisan queue:work
-
-# Terminal 3 — Frontend
-cd frontend && npm run dev
-```
 
 ## Documentation
 
