@@ -1,0 +1,102 @@
+# Bariwala Hub — Docker Compose (Local Development)
+#
+# Services:
+# - postgres: PostgreSQL 16 database
+# - redis: Redis 7 cache/queue/session store
+# - mailpit: Email testing (SMTP capture + web UI)
+#
+# Note: PHP/Laravel and Next.js run natively on the host for faster
+# development feedback. Only infrastructure services run in Docker.
+# If you prefer full containerization, uncomment the app and frontend services.
+
+services:
+  # ---- PostgreSQL ----
+  postgres:
+    image: postgres:16-alpine
+    container_name: bariwala_postgres
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: bariwala_hub
+      POSTGRES_USER: bariwala_user
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bariwala_user -d bariwala_hub"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---- Redis ----
+  redis:
+    image: redis:7-alpine
+    container_name: bariwala_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---- Mailpit (Email Testing) ----
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: bariwala_mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"   # Web UI
+      - "1025:1025"   # SMTP
+    environment:
+      MP_MAX_MESSAGES: 1000
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+
+  # ---- Uncomment below for full containerized development ----
+
+  # app:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/php/Dockerfile
+  #   container_name: bariwala_app
+  #   restart: unless-stopped
+  #   working_dir: /var/www/html
+  #   volumes:
+  #     - ./backend:/var/www/html
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   environment:
+  #     DB_CONNECTION: pgsql
+  #     DB_HOST: postgres
+  #     DB_PORT: 5432
+  #     DB_DATABASE: bariwala_hub
+  #     DB_USERNAME: bariwala_user
+  #     DB_PASSWORD: secret
+  #     REDIS_HOST: redis
+  #     REDIS_PORT: 6379
+
+  # nginx:
+  #   image: nginx:1.27-alpine
+  #   container_name: bariwala_nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8000:80"
+  #   volumes:
+  #     - ./backend:/var/www/html
+  #     - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+  #   depends_on:
+  #     - app
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
