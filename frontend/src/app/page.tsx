@@ -24,7 +24,7 @@ import {
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary selection:text-white transition-colors duration-200">
-      {/* ---- Navigation Bar ---- */}
+      {/* ---- Header Navigation Bar ---- */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-background/85 border-b border-border px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-xs">
         <Link href="/" className="flex items-center gap-2 font-extrabold text-xl tracking-tight text-foreground">
           <span className="bg-primary text-primary-foreground w-9 h-9 rounded-xl flex items-center justify-center text-base shadow-sm">
@@ -33,11 +33,12 @@ export default function LandingPage() {
           <span className="tracking-tight">BashaBari</span>
         </Link>
 
+        {/* Dedicated Route Sub-Header Navigation Links */}
         <nav className="hidden lg:flex items-center gap-7 text-xs sm:text-sm font-semibold text-muted-foreground">
-          <a href="#features" className="hover:text-foreground transition-colors">Features</a>
-          <a href="#benefits" className="hover:text-foreground transition-colors">Who It&apos;s For</a>
-          <a href="#utilities" className="hover:text-foreground transition-colors">Sub-Meters</a>
-          <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
+          <Link href="/features" className="hover:text-foreground transition-colors">Features</Link>
+          <Link href="/who-its-for" className="hover:text-foreground transition-colors">Who It&apos;s For</Link>
+          <Link href="/sub-meters" className="hover:text-foreground transition-colors">Sub-Meters</Link>
+          <Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
           <Link href="/tenant-portal" className="hover:text-foreground transition-colors">Tenant Portal</Link>
           <Link href="/compliance" className="hover:text-foreground transition-colors">Legal Act 1992</Link>
           <Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link>
@@ -61,8 +62,8 @@ export default function LandingPage() {
 
       {/* ---- Hero Section ---- */}
       <section className="relative pt-12 pb-16 px-4 sm:px-8 max-w-7xl mx-auto text-center space-y-8 overflow-hidden">
-        {/* Soft Background Radial Glow */}
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-primary/10 rounded-full blur-3xl -z-10 pointer-events-none" />
+        {/* Soft Radial Glow Accent */}
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[34rem] h-[34rem] bg-primary/10 rounded-full blur-3xl -z-10 pointer-events-none" />
 
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-accent/60 border border-border text-xs font-semibold text-foreground shadow-xs">
           <Sparkles className="w-3.5 h-3.5 text-primary" />
@@ -97,8 +98,44 @@ export default function LandingPage() {
           </Button>
         </div>
 
+        {/* Hero Stock Photography Visual Banner */}
+        <div className="pt-6 max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="rounded-2xl overflow-hidden shadow-md border border-border group relative h-48 md:h-56">
+            <img
+              src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80"
+              alt="Modern Residential Apartment Tower in Bangladesh"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-4">
+              <span className="text-white text-xs font-bold font-sans">Multi-Story Residential Towers</span>
+            </div>
+          </div>
+
+          <div className="rounded-2xl overflow-hidden shadow-md border border-border group relative h-48 md:h-56">
+            <img
+              src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=800&q=80"
+              alt="Property Owner holding keys"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-4">
+              <span className="text-white text-xs font-bold font-sans">Bariwala &amp; Caretaker Operations</span>
+            </div>
+          </div>
+
+          <div className="rounded-2xl overflow-hidden shadow-md border border-border group relative h-48 md:h-56">
+            <img
+              src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80"
+              alt="Sleek Flat Interior Living Room"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-4">
+              <span className="text-white text-xs font-bold font-sans">Tenant Self-Service Portal</span>
+            </div>
+          </div>
+        </div>
+
         {/* Hero Interactive Dashboard Preview Mockup */}
-        <div className="pt-6 max-w-5xl mx-auto">
+        <div className="pt-4 max-w-5xl mx-auto">
           <Card className="border-border bg-card shadow-xl rounded-2xl text-left overflow-hidden">
             <CardHeader className="border-b border-border pb-3.5 px-6 flex flex-row items-center justify-between bg-accent/30">
               <div className="flex items-center gap-2">
@@ -139,8 +176,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ---- Target Audience Benefits Grid ---- */}
-      <section id="benefits" className="py-16 px-4 sm:px-8 bg-accent/20 border-y border-border">
+      {/* ---- Stakeholder Solutions Overview ---- */}
+      <section className="py-16 px-4 sm:px-8 bg-accent/20 border-y border-border">
         <div className="max-w-7xl mx-auto space-y-10">
           <div className="text-center space-y-2">
             <Badge variant="outline" className="text-xs font-semibold text-primary border-primary/30">
@@ -156,199 +193,50 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Card 1: Building Owners */}
-            <Card className="border-border bg-card p-6 space-y-4 hover:shadow-md transition-all">
-              <div className="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xl">
-                🏠
+            <Card className="border-border bg-card p-6 space-y-4 hover:shadow-md transition-all flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xl">
+                  🏠
+                </div>
+                <h3 className="text-lg font-bold text-foreground">For Property Owners (Bariwalas)</h3>
+                <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">
+                  Automate monthly rent billing (`INV-YYYYMM-XXX`), collect rent online via bKash/Nagad/SSLCommerz, and track net profit with general ledger accounting.
+                </p>
               </div>
-              <h3 className="text-lg font-bold text-foreground">For Property Owners (Bariwalas)</h3>
-              <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">
-                Automate monthly rent billing (`INV-YYYYMM-XXX`), collect rent online via bKash/Nagad/SSLCommerz, and track net profit with general ledger accounting.
-              </p>
-              <ul className="space-y-2 text-xs text-foreground/80 pt-1">
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" /> 5-Day Free Trial upon registration</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" /> Auto-reconciled bKash / Nagad rent payments</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" /> Poisha currency precision (`1 BDT = 100 poisha`)</li>
-              </ul>
+              <Button asChild variant="outline" size="sm" className="w-full text-xs font-semibold mt-4">
+                <Link href="/who-its-for">Learn More <ChevronRight className="w-3.5 h-3.5 ml-1" /></Link>
+              </Button>
             </Card>
 
             {/* Card 2: Caretakers & Managers */}
-            <Card className="border-border bg-card p-6 space-y-4 hover:shadow-md transition-all">
-              <div className="w-11 h-11 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-xl">
-                🔑
+            <Card className="border-border bg-card p-6 space-y-4 hover:shadow-md transition-all flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="w-11 h-11 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-xl">
+                  🔑
+                </div>
+                <h3 className="text-lg font-bold text-foreground">For Caretakers &amp; Managers</h3>
+                <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">
+                  Log monthly sub-meter electricity (DPDC, DESCO, BREB), gas, and WASA water readings. Dispatch repair technicians for plumbing or emergency maintenance.
+                </p>
               </div>
-              <h3 className="text-lg font-bold text-foreground">For Caretakers &amp; Managers</h3>
-              <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">
-                Log monthly sub-meter electricity (DPDC, DESCO, BREB), gas, and WASA water readings. Dispatch repair technicians for plumbing or emergency maintenance.
-              </p>
-              <ul className="space-y-2 text-xs text-foreground/80 pt-1">
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-amber-500 shrink-0" /> Log DPDC, DESCO &amp; WASA sub-meters</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-amber-500 shrink-0" /> Maintenance ticket priority dispatch</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-amber-500 shrink-0" /> Automated SMS dispatches to tenants</li>
-              </ul>
+              <Button asChild variant="outline" size="sm" className="w-full text-xs font-semibold mt-4">
+                <Link href="/who-its-for">Learn More <ChevronRight className="w-3.5 h-3.5 ml-1" /></Link>
+              </Button>
             </Card>
 
             {/* Card 3: Tenants */}
-            <Card className="border-border bg-card p-6 space-y-4 hover:shadow-md transition-all">
-              <div className="w-11 h-11 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xl">
-                📱
-              </div>
-              <h3 className="text-lg font-bold text-foreground">For Tenants</h3>
-              <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">
-                Access your mobile-first self-service portal (`/tenant-portal`), pay rent in 1-click via bKash/Nagad, download official printable receipts, and request repairs.
-              </p>
-              <ul className="space-y-2 text-xs text-foreground/80 pt-1">
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500 shrink-0" /> 1-Click bKash/Nagad/SSLCommerz checkout</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500 shrink-0" /> Download official printable PDF receipts</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500 shrink-0" /> Rent Control Act 1992 compliance</li>
-              </ul>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* ---- Sub-Meter Utilities Highlight Section ---- */}
-      <section id="utilities" className="py-16 px-4 sm:px-8 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-          <div className="space-y-5">
-            <Badge variant="outline" className="text-xs font-semibold text-amber-600 dark:text-amber-400 border-amber-500/30">
-              Nationwide Bangladesh Utility Tariff Support
-            </Badge>
-
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground">
-              Sub-Meter Billing Across All 10 BD Utility Providers
-            </h2>
-
-            <p className="text-muted-foreground text-xs sm:text-base leading-relaxed">
-              Eliminate utility calculation disputes. BashaBari pre-configures tariff structures for electricity, gas, and water utility providers across Dhaka, Chattogram, Sylhet, Rajshahi, Khulna, and Barishal.
-            </p>
-
-            <div className="grid grid-cols-3 gap-3 pt-1">
-              <div className="p-3 rounded-lg bg-card border border-border text-center shadow-xs">
-                <Zap className="w-5 h-5 text-amber-500 mx-auto mb-1" />
-                <p className="text-xs font-bold text-foreground">Electricity</p>
-                <p className="text-[10px] text-muted-foreground">DPDC, DESCO, BREB, NESCO, WZPDCL</p>
-              </div>
-
-              <div className="p-3 rounded-lg bg-card border border-border text-center shadow-xs">
-                <Gauge className="w-5 h-5 text-rose-500 mx-auto mb-1" />
-                <p className="text-xs font-bold text-foreground">Natural Gas</p>
-                <p className="text-[10px] text-muted-foreground">Titas, Karnaphuli, Jalalabad</p>
-              </div>
-
-              <div className="p-3 rounded-lg bg-card border border-border text-center shadow-xs">
-                <Landmark className="w-5 h-5 text-blue-500 mx-auto mb-1" />
-                <p className="text-xs font-bold text-foreground">WASA Water</p>
-                <p className="text-[10px] text-muted-foreground">DWASA, CWASA</p>
-              </div>
-            </div>
-          </div>
-
-          <Card className="border-border bg-card p-6 space-y-4 text-xs font-mono text-muted-foreground shadow-sm">
-            <div className="flex justify-between items-center border-b border-border pb-3">
-              <span className="font-bold text-foreground font-sans">Sub-Meter Utility Formula</span>
-              <Badge variant="outline" className="text-[10px] font-sans">Poisha Precision</Badge>
-            </div>
-            <p className="text-foreground font-sans text-xs">
-              `units_consumed = current_reading - previous_reading`
-            </p>
-            <p className="text-foreground font-sans text-xs">
-              `total_utility_cost = units_consumed * rate_per_unit_poisha`
-            </p>
-            <div className="p-3.5 rounded-lg bg-accent/40 border border-border space-y-1 text-foreground font-mono">
-              <p className="font-semibold text-xs font-sans">📍 Flat A-101 (DPDC Electricity Sub-Meter)</p>
-              <p className="text-xs">Previous Reading: 120.00 kWh | Current Reading: 220.00 kWh</p>
-              <p className="text-amber-600 dark:text-amber-400 font-bold">Total Consumed: 100 Units @ ৳ 8.50/unit = ৳ 850.00</p>
-            </div>
-          </Card>
-        </div>
-      </section>
-
-      {/* ---- Subscription & Pricing Section ---- */}
-      <section id="pricing" className="py-16 px-4 sm:px-8 bg-accent/20 border-t border-border">
-        <div className="max-w-7xl mx-auto space-y-10 text-center">
-          <div className="space-y-2">
-            <Badge variant="outline" className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
-              Simple &amp; Transparent Pricing
-            </Badge>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground">
-              Start Free, Scale Across Bangladesh
-            </h2>
-            <p className="text-muted-foreground text-xs sm:text-base max-w-lg mx-auto">
-              Every new organization starts with a 5-Day Full-Featured Free Trial. No credit card required.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-            {/* Plan 1: Free Trial */}
-            <Card className="border-border bg-card p-6 flex flex-col justify-between space-y-6">
+            <Card className="border-border bg-card p-6 space-y-4 hover:shadow-md transition-all flex flex-col justify-between">
               <div className="space-y-3">
-                <Badge variant="outline" className="text-xs font-bold text-primary border-primary/30">
-                  Risk-Free Exploration
-                </Badge>
-                <h3 className="text-xl font-bold text-foreground">5-Day Free Trial</h3>
-                <p className="text-3xl font-extrabold text-foreground">৳ 0 <span className="text-xs font-normal text-muted-foreground">/ 5 days</span></p>
-                <p className="text-xs text-muted-foreground">Perfect for testing platform features with zero risk.</p>
-
-                <ul className="space-y-2 text-xs text-foreground/80 pt-2">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> Full feature access for 5 days</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> Unlimited properties &amp; flat units</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> bKash/Nagad payment testing</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> No credit card required</li>
-                </ul>
+                <div className="w-11 h-11 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xl">
+                  📱
+                </div>
+                <h3 className="text-lg font-bold text-foreground">For Tenants</h3>
+                <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">
+                  Access your mobile-first self-service portal (`/tenant-portal`), pay rent in 1-click via bKash/Nagad, download official printable receipts, and request repairs.
+                </p>
               </div>
-
-              <Button asChild className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold">
-                <Link href="/register">Start Free Trial Now</Link>
-              </Button>
-            </Card>
-
-            {/* Plan 2: Bariwala Standard */}
-            <Card className="border-primary bg-card p-6 flex flex-col justify-between space-y-6 relative shadow-md">
-              <Badge className="absolute -top-3 right-6 bg-primary text-primary-foreground text-[10px] font-bold uppercase px-3">
-                Most Popular
-              </Badge>
-
-              <div className="space-y-3">
-                <Badge variant="outline" className="text-xs font-bold text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
-                  Residential Property Owners
-                </Badge>
-                <h3 className="text-xl font-bold text-foreground">Standard Bariwala</h3>
-                <p className="text-3xl font-extrabold text-foreground">৳ 999 <span className="text-xs font-normal text-muted-foreground">/ month</span></p>
-                <p className="text-xs text-muted-foreground">Ideal for residential apartment buildings up to 20 flat units.</p>
-
-                <ul className="space-y-2 text-xs text-foreground/80 pt-2">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> Up to 20 Flat Units &amp; Tenant Profiles</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> Auto Rent Invoicing &amp; bKash/Nagad</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> DPDC/DESCO/DWASA Sub-Meter Module</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> Rent Control Act 1992 Contract Engine</li>
-                </ul>
-              </div>
-
-              <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
-                <Link href="/register">Choose Standard Plan</Link>
-              </Button>
-            </Card>
-
-            {/* Plan 3: Enterprise Caretaker */}
-            <Card className="border-border bg-card p-6 flex flex-col justify-between space-y-6">
-              <div className="space-y-3">
-                <Badge variant="outline" className="text-xs font-bold text-amber-600 dark:text-amber-400 border-amber-500/30">
-                  Commercial &amp; Multi-Building
-                </Badge>
-                <h3 className="text-xl font-bold text-foreground">Enterprise Caretaker</h3>
-                <p className="text-3xl font-extrabold text-foreground">৳ 2,499 <span className="text-xs font-normal text-muted-foreground">/ month</span></p>
-                <p className="text-xs text-muted-foreground">For commercial towers, caretakers, and property management firms.</p>
-
-                <ul className="space-y-2 text-xs text-foreground/80 pt-2">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-amber-500" /> Unlimited Buildings &amp; Flat Units</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-amber-500" /> Multi-Staff Roles &amp; Security Audit Logs</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-amber-500" /> Automated Telco SMS Dispatches</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-amber-500" /> Priority Support &amp; Financial Ledger Reports</li>
-                </ul>
-              </div>
-
-              <Button asChild variant="outline" className="w-full font-bold">
-                <Link href="/register">Choose Enterprise Plan</Link>
+              <Button asChild variant="outline" size="sm" className="w-full text-xs font-semibold mt-4">
+                <Link href="/tenant-portal">Access Portal <ChevronRight className="w-3.5 h-3.5 ml-1" /></Link>
               </Button>
             </Card>
           </div>
@@ -373,11 +261,11 @@ export default function LandingPage() {
           <div className="space-y-2.5">
             <p className="font-bold text-foreground text-sm">Product Navigation</p>
             <ul className="space-y-1.5">
-              <li><Link href="/register" className="hover:text-foreground transition-colors">Start 5-Day Free Trial</Link></li>
-              <li><Link href="/login" className="hover:text-foreground transition-colors">Owner &amp; Caretaker Sign In</Link></li>
+              <li><Link href="/features" className="hover:text-foreground transition-colors">Features</Link></li>
+              <li><Link href="/who-its-for" className="hover:text-foreground transition-colors">Who It&apos;s For</Link></li>
+              <li><Link href="/sub-meters" className="hover:text-foreground transition-colors">Sub-Meter Utilities</Link></li>
+              <li><Link href="/pricing" className="hover:text-foreground transition-colors">Pricing Plans</Link></li>
               <li><Link href="/tenant-portal" className="hover:text-foreground transition-colors">Tenant Self-Service Portal</Link></li>
-              <li><a href="#utilities" className="hover:text-foreground transition-colors">Sub-Meter Utilities</a></li>
-              <li><a href="#pricing" className="hover:text-foreground transition-colors">Pricing Plans</a></li>
             </ul>
           </div>
 

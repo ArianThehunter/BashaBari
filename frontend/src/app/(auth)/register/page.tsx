@@ -64,8 +64,8 @@ export default function RegisterPage() {
     <Card className="shadow-2xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
       <CardHeader className="space-y-1 text-center">
         <CardTitle className="text-2xl font-extrabold text-slate-900 dark:text-white">Create Account</CardTitle>
-        <CardDescription className="text-slate-600 dark:text-slate-400">
-          Get started with Bariwala Hub property management
+        <CardDescription className="text-muted-foreground">
+          Get started with BashaBari property management
         </CardDescription>
       </CardHeader>
       <CardContent>
