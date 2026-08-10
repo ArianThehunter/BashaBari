@@ -8,12 +8,12 @@ export default function LegalCompliancePage() {
   const complianceRules = [
     {
       id: "BD-001",
-      title: "First-Time 5-Day Free Trial Policy",
+      title: "First-Time 5-Day Free Trial Guarantee",
       status: "Automated Enforcement",
       icon: Clock,
       description:
         "Initial organization registrations automatically activate a 5-day full-featured free trial period calculated using Bangladesh Standard Time (Asia/Dhaka).",
-      implementation: "Carbon::today('Asia/Dhaka')->addDays(5) upon organization creation.",
+      implementation: "Automatic 5-day trial period calculated in Bangladesh Standard Time.",
     },
     {
       id: "BD-002",
@@ -22,7 +22,7 @@ export default function LegalCompliancePage() {
       icon: FileText,
       description:
         "Tenant profiles and eviction proceedings strictly embed the mandatory legal notice clauses pursuant to Section 18 of the Premises Rent Control Act 1992 of Bangladesh.",
-      implementation: "Mandatory notice template generated on tenant profiles and eviction documents.",
+      implementation: "Legally binding eviction notice templates generated on tenant profiles and legal documents.",
     },
     {
       id: "BD-003",
@@ -31,7 +31,7 @@ export default function LegalCompliancePage() {
       icon: Scale,
       description:
         "Lease creation wizard enforces standard 12 to 24-month contract terms compliant with Bangladesh commercial and residential tenancy standards.",
-      implementation: "Validation schema restricts start/end dates to 1-2 year standard terms.",
+      implementation: "Standard 12 to 24-month tenancy contract terms generated automatically.",
     },
     {
       id: "BD-008",
@@ -40,7 +40,7 @@ export default function LegalCompliancePage() {
       icon: RefreshCw,
       description:
         "Refunds are strictly restricted to advance rent paid when a tenant vacates early. Security deposits are calculated against damages before settlement.",
-      implementation: "PaymentController::refund validates advance payment balance before processing.",
+      implementation: "Advance rent balance verified before processing early vacate refunds.",
     },
     {
       id: "BD-MONEY",
@@ -49,16 +49,16 @@ export default function LegalCompliancePage() {
       icon: Landmark,
       description:
         "All currency values across DB schemas, invoices, and payment gateways are stored as integer poisha (1 BDT = 100 poisha) to prevent floating-point inaccuracies.",
-      implementation: "BIGINT columns with bdtToPoisha() and formatMoney() frontend formatting.",
+      implementation: "100% poisha accounting standard to prevent currency calculation errors.",
     },
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-5xl">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Legal & Regulatory Compliance</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Legal &amp; Regulatory Compliance</h1>
         <p className="text-sm text-muted-foreground">
-          Compliance enforcement under the Premises Rent Control Act 1992 of Bangladesh and platform business rules
+          Compliance protection under the Premises Rent Control Act 1992 of Bangladesh and platform business rules
         </p>
       </div>
 
@@ -76,7 +76,7 @@ export default function LegalCompliancePage() {
               <Badge className="bg-emerald-600 text-white text-xs font-semibold">Verified Active</Badge>
             </div>
             <p className="text-sm text-muted-foreground">
-              Bariwala Hub has automated legal notice generation, lease term enforcement, advance rent refund constraints, and financial precision standards built directly into its core backend engine.
+              BashaBari has automated legal notice generation, lease term enforcement, advance rent refund constraints, and financial precision standards built directly into its core engine.
             </p>
           </div>
         </CardContent>
@@ -112,9 +112,9 @@ export default function LegalCompliancePage() {
               </CardHeader>
 
               <CardContent className="pb-4 pt-0">
-                <div className="p-3 rounded-md bg-accent/40 border border-border text-xs text-muted-foreground font-mono flex items-center gap-2">
+                <div className="p-3 rounded-md bg-accent/40 border border-border text-xs text-muted-foreground font-medium flex items-center gap-2">
                   <ShieldAlert className="w-4 h-4 text-primary shrink-0" />
-                  <span>Enforcement Logic: {rule.implementation}</span>
+                  <span>Protection Guarantee: {rule.implementation}</span>
                 </div>
               </CardContent>
             </Card>
