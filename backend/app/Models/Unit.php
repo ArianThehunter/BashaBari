@@ -22,6 +22,8 @@ class Unit extends Model
         'bathrooms',
         'area_sqft',
         'base_rent_amount',
+        'previous_base_rent_amount',
+        'last_rent_revised_at',
         'occupancy_status',
         'occupancy_type',
         'service_charge_amount',
@@ -39,6 +41,8 @@ class Unit extends Model
             'bathrooms' => 'integer',
             'area_sqft' => 'float',
             'base_rent_amount' => 'integer', // Always stored as integer poisha (1 BDT = 100 poisha)
+            'previous_base_rent_amount' => 'integer',
+            'last_rent_revised_at' => 'datetime',
             'service_charge_amount' => 'integer',
             'garage_fee_amount' => 'integer',
             'bike_count' => 'integer',

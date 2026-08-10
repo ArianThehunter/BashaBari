@@ -27,6 +27,8 @@ return new class extends Migration
             $table->decimal('area_sqft', 10, 2)->nullable();
             
             $table->bigInteger('base_rent_amount')->default(0); // Stored in poisha (1 BDT = 100 poisha)
+            $table->bigInteger('previous_base_rent_amount')->default(0); // Previous rent before revision (poisha)
+            $table->timestamp('last_rent_revised_at')->nullable(); // Timestamp of last Rent Act 1992 revision
             $table->bigInteger('service_charge_amount')->default(200000); // Default ৳2,000 poisha mandatory service charge
             
             $table->string('garage_type', 30)->default('none'); // 'none', 'bike', 'car', 'both'

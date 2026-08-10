@@ -104,6 +104,7 @@ Route::prefix('v1')->group(function () {
         // Units
         Route::get('/units', [UnitController::class, 'index']);
         Route::post('/units', [UnitController::class, 'store']);
+        Route::post('/units/{id}/revise-rent', [UnitController::class, 'reviseRent']);
         Route::put('/units/{id}', [UnitController::class, 'update']);
         Route::delete('/units/{id}', [UnitController::class, 'destroy']);
 

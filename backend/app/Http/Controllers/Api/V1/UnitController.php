@@ -203,4 +203,85 @@ class UnitController extends Controller
             'message' => 'Unit deleted successfully.',
         ]);
     }
+
+    /**
+     * Revise base rent for a unit adhering to Premises Rent Control Act 1992 of Bangladesh.
+     */
+    public function reviseRent(Request $request, string $id): JsonResponse
+    {
+        $user = $request->user();
+
+        $organizationId = $request->header('X-Organization-Id') ?: $request->query('organization_id');
+
+        $member = OrganizationMember::where('user_id', $user->id)
+            ->where('status', 'active')
+            ->when($organizationId, fn ($q) => $q->where('organization_id', $organizationId))
+            ->first();
+
+        if (! $member || ! in_array($member->role, ['owner', 'bariwala', 'admin'])) {
+            return response()->json([
+                'message' => 'Role Restricted: Only Property Owners (Bariwalas) can authorize rent increases under platform policy & Bangladesh law.',
+            ], 403);
+        }
+
+        $unit = Unit::where('organization_id', $member->organization_id)->findOrFail($id);
+
+        $request->validate([
+            'new_base_rent_amount' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $newBaseRentPoisha = (int) round($request->new_base_rent_amount);
+        $currentBaseRentPoisha = (int) $unit->base_rent_amount;
+
+        // If decreasing rent or keeping it unchanged, allow immediately
+        if ($newBaseRentPoisha <= $currentBaseRentPoisha) {
+            $unit->update([
+                'previous_base_rent_amount' => $currentBaseRentPoisha,
+                'base_rent_amount' => $newBaseRentPoisha,
+                'last_rent_revised_at' => now(),
+            ]);
+
+            return response()->json([
+                'message' => 'Unit rent updated successfully.',
+                'data' => $unit->load(['property', 'building', 'floor']),
+            ]);
+        }
+
+        // 1. Statutory 24-month cooling period check for rent increases
+        if ($unit->last_rent_revised_at) {
+            $monthsSinceLastRevision = $unit->last_rent_revised_at->diffInMonths(now());
+            if ($monthsSinceLastRevision < 24) {
+                $eligibleDate = $unit->last_rent_revised_at->addMonths(24)->format('d M, Y');
+                return response()->json([
+                    'message' => "Statutory Cooling Period Active: Under Premises Rent Control Act 1992 of Bangladesh, rent revision is locked for 24 months from the previous agreement date. Next eligible date: {$eligibleDate}.",
+                ], 422);
+            }
+        }
+
+        // 2. Statutory 20% maximum ceiling cap check
+        $maxAllowedRentPoisha = (int) round($currentBaseRentPoisha * 1.20);
+        if ($newBaseRentPoisha > $maxAllowedRentPoisha) {
+            $currentBdt = number_format($currentBaseRentPoisha / 100, 2);
+            $maxAllowedBdt = number_format($maxAllowedRentPoisha / 100, 2);
+            $requestedBdt = number_format($newBaseRentPoisha / 100, 2);
+
+            return response()->json([
+                'message' => "Statutory Ceiling Exceeded: Under Premises Rent Control Act 1992, the maximum allowed rent for this unit is ৳{$maxAllowedBdt} (20% max ceiling above current base rent of ৳{$currentBdt}). You requested ৳{$requestedBdt}.",
+                'max_allowed_bdt' => $maxAllowedRentPoisha / 100,
+            ], 422);
+        }
+
+        // 3. Perform rent revision
+        $unit->update([
+            'previous_base_rent_amount' => $currentBaseRentPoisha,
+            'base_rent_amount' => $newBaseRentPoisha,
+            'last_rent_revised_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Rent revised successfully in compliance with Premises Rent Control Act 1992.',
+            'data' => $unit->load(['property', 'building', 'floor']),
+        ]);
+    }
 }
+

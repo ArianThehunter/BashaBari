@@ -1,21 +1,32 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Scale, ArrowLeft, CheckCircle2, ShieldCheck, Mail, Phone, MapPin } from "lucide-react";
+import { Scale, ArrowLeft, ArrowRight, ShieldCheck, Lock, CheckCircle2 } from "lucide-react";
 
-export default function CompliancePage() {
+export default function LegalCompliancePage() {
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary selection:text-white transition-colors duration-200">
       {/* Header */}
-      <header className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b border-border px-4 sm:px-8 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-50 backdrop-blur-md bg-background/85 border-b border-border px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-xs">
         <Link href="/" className="flex items-center gap-2 font-extrabold text-xl tracking-tight text-foreground">
-          <span className="bg-primary text-white w-9 h-9 rounded-xl flex items-center justify-center text-base shadow-md">
+          <span className="bg-primary text-primary-foreground w-9 h-9 rounded-xl flex items-center justify-center text-base shadow-sm">
             🏠
           </span>
           <span>BashaBari</span>
         </Link>
+
+        <nav className="hidden lg:flex items-center gap-7 text-xs sm:text-sm font-semibold text-muted-foreground">
+          <Link href="/features" className="hover:text-foreground transition-colors">Features</Link>
+          <Link href="/who-its-for" className="hover:text-foreground transition-colors">Who It&apos;s For</Link>
+          <Link href="/sub-meters" className="hover:text-foreground transition-colors">Sub-Meters</Link>
+          <Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
+          <Link href="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
+          <Link href="/tenant-portal" className="hover:text-foreground transition-colors">Tenant Portal</Link>
+          <Link href="/compliance" className="text-foreground font-bold">Legal Act 1992</Link>
+          <Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link>
+        </nav>
 
         <div className="flex items-center gap-3">
           <ThemeToggle />
@@ -28,78 +39,91 @@ export default function CompliancePage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-4xl mx-auto px-4 py-12 space-y-8">
-        <div className="space-y-3 text-center sm:text-left border-b border-border pb-8">
+      <main className="flex-1 max-w-4xl mx-auto px-4 sm:px-8 py-12 space-y-12">
+        <div className="text-center space-y-4">
           <Badge variant="outline" className="text-xs font-semibold text-primary border-primary/30">
-            Legal Framework Bangladesh
+            Legal Compliance Framework
           </Badge>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-            Premises Rent Control Act 1992 Compliance Guide
+          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight">
+            Premises Rent Control Act 1992 Legal Guide
           </h1>
-          <p className="text-muted-foreground text-sm sm:text-base leading-relaxed">
-            How BashaBari safeguards property owners (Bariwalas), caretakers, and tenants under Bangladeshi tenancy law.
+          <p className="text-muted-foreground text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
+            BashaBari enforces Bangladeshi tenancy law standards across lease agreements, rent revision rules, tenant eviction procedures, and security deposit management.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card className="p-4 border-border bg-card space-y-2">
-            <Scale className="w-6 h-6 text-primary" />
-            <h3 className="font-bold text-sm">Standardized Leases</h3>
-            <p className="text-xs text-muted-foreground">Automated lease agreements adhering to statutory notice periods.</p>
+        {/* Legal Act Breakdown */}
+        <div className="space-y-6">
+          {/* Section 16 & 18: Statutory Rent Revision Rules */}
+          <Card className="border-primary bg-card p-6 sm:p-8 space-y-4 shadow-sm">
+            <div className="flex items-center gap-3 border-b border-border pb-3">
+              <div className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-bold">
+                <Scale className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-foreground">Section 16 &amp; 18: Rent Revision &amp; Owner Discretion Cap</h2>
+                <p className="text-xs text-muted-foreground">Statutory rules governing rent increases in Bangladesh</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              <p>
+                Under the Premises Rent Control Act 1992 of Bangladesh, landlords and property owners must adhere to strict statutory rules regarding rent revisions:
+              </p>
+
+              <ul className="space-y-2 text-foreground/90 font-medium">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <span><strong>Owner-Only Authorization:</strong> Only Property Owners (Bariwalas) are authorized to increase rent. Caretakers and staff are role-restricted.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <span><strong>Initial Base Rent Freedom:</strong> Property owners can set any initial base rent they choose when first listing or renting a unit (e.g. ৳ 10,000.00).</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <span><strong>Statutory 24-Month Cooling Period:</strong> Once base rent is established, rent revisions are locked for 24 months (2 years) from the previous agreement date.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <span><strong>20% Maximum Statutory Ceiling:</strong> When eligible after 24 months, the statutory ceiling cap is 20% above the current base rent (e.g. ৳ 10,000 → Max Cap ৳ 12,000).</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <span><strong>Owner Discretion:</strong> The owner can set ANY new rent up to ৳ 12,000 (e.g. ৳ 10,500, ৳ 11,000, ৳ 12,000, or choose no change). However, any amount exceeding ৳ 12,000 is automatically blocked by BashaBari.</span>
+                </li>
+              </ul>
+            </div>
           </Card>
-          <Card className="p-4 border-border bg-card space-y-2">
-            <ShieldCheck className="w-6 h-6 text-emerald-500" />
-            <h3 className="font-bold text-sm">Transparent Invoicing</h3>
-            <p className="text-xs text-muted-foreground">Itemized rent receipts with exact poisha utility calculations.</p>
+
+          {/* Section 18: Statutory Notice Period */}
+          <Card className="border-border bg-card p-6 space-y-4">
+            <h3 className="text-lg font-bold text-foreground">Section 18 Notice Period &amp; Tenancy Termination</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              Standard tenancy contracts generated on BashaBari mandate a minimum 1 to 2 month written notice period prior to tenancy termination or eviction.
+            </p>
           </Card>
-          <Card className="p-4 border-border bg-card space-y-2">
-            <CheckCircle2 className="w-6 h-6 text-blue-500" />
-            <h3 className="font-bold text-sm">Legal Protection</h3>
-            <p className="text-xs text-muted-foreground">Audit-ready payment trail via SSLCommerz, bKash & Nagad.</p>
+
+          {/* Security Deposit Rules */}
+          <Card className="border-border bg-card p-6 space-y-4">
+            <h3 className="text-lg font-bold text-foreground">Security Deposit Refund &amp; Deduction Protocols</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              Security deposits must be refunded upon flat inspection. Any deductions for flat damage or unpaid utility bills are recorded on official clearance forms.
+            </p>
           </Card>
         </div>
 
-        <div className="space-y-6 text-sm text-foreground leading-relaxed">
-          <section className="space-y-3">
-            <h2 className="text-xl font-bold text-primary">1. Overview of the Premises Rent Control Act 1992</h2>
-            <p>
-              The Premises Rent Control Act 1992 regulates urban tenancy in Bangladesh, establishing statutory standards for fair rent determination, security deposits, eviction notices, and landlord/tenant obligations across metropolitan regions including Dhaka, Chattogram, Sylhet, and Rajshahi.
-            </p>
-          </section>
-
-          <section className="space-y-3">
-            <h2 className="text-xl font-bold text-primary">2. How BashaBari Enforces Statutory Compliance</h2>
-            <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-              <li>
-                <strong className="text-foreground">Official Rent Receipts:</strong> Every payment made on BashaBari automatically generates an immutable digital receipt complying with Section 13 of the Act.
-              </li>
-              <li>
-                <strong className="text-foreground">Sub-Meter Utility Transparency:</strong> Electricity (DPDC, DESCO, BREB) and Water (DWASA) sub-meter charges are billed at official government tariffs without arbitrary markups.
-              </li>
-              <li>
-                <strong className="text-foreground">Formal Departure Notices:</strong> Tenants submit formal move-out notices directly through the BashaBari Tenant Portal, recording timestamped legal proof for security deposit reconciliation.
-              </li>
-            </ul>
-          </section>
-
-          <section className="space-y-3 pt-4 border-t border-border">
-            <h2 className="text-xl font-bold">Need Legal or Technical Support?</h2>
-            <p className="text-muted-foreground">
-              Contact the BashaBari Compliance & Support Office for guidance on lease templates or account management.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 pt-2 font-mono text-xs">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Mail className="w-4 h-4 text-primary" /> readusshalehin22@gmail.com
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Phone className="w-4 h-4 text-primary" /> +8801770207576
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <MapPin className="w-4 h-4 text-primary" /> Dhaka, Bangladesh
-              </div>
-            </div>
-          </section>
+        {/* CTA */}
+        <div className="bg-accent/40 border border-border p-8 rounded-2xl text-center space-y-4">
+          <h2 className="text-2xl font-extrabold">Generate Legal Act 1992 Tenancy Contracts Today</h2>
+          <p className="text-muted-foreground text-xs sm:text-sm max-w-xl mx-auto">
+            Ensure complete legal compliance for your properties with BashaBari&apos;s automated lease contract engine.
+          </p>
+          <Button asChild size="lg" className="font-bold gap-2">
+            <Link href="/register">
+              Start 5-Day Free Trial <ArrowRight className="w-4 h-4" />
+            </Link>
+          </Button>
         </div>
       </main>
 
