@@ -22,6 +22,7 @@ export default function PricingPage() {
           <Link href="/who-its-for" className="hover:text-foreground transition-colors">Who It&apos;s For</Link>
           <Link href="/sub-meters" className="hover:text-foreground transition-colors">Sub-Meters</Link>
           <Link href="/pricing" className="text-foreground font-bold">Pricing</Link>
+          <Link href="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
           <Link href="/tenant-portal" className="hover:text-foreground transition-colors">Tenant Portal</Link>
           <Link href="/compliance" className="hover:text-foreground transition-colors">Legal Act 1992</Link>
           <Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link>
@@ -103,14 +104,14 @@ export default function PricingPage() {
             </Button>
           </Card>
 
-          {/* Plan 3: Enterprise Caretaker */}
+          {/* Plan 3: Enterprise Caretaker (Corrected to ৳ 1,499/mo) */}
           <Card className="border-border bg-card p-6 flex flex-col justify-between space-y-6">
             <div className="space-y-3">
               <Badge variant="outline" className="text-xs font-bold text-amber-600 dark:text-amber-400 border-amber-500/30">
                 Commercial &amp; Multi-Building
               </Badge>
               <h3 className="text-2xl font-bold">Enterprise Caretaker</h3>
-              <p className="text-3xl font-extrabold">৳ 2,499 <span className="text-xs font-normal text-muted-foreground">/ month</span></p>
+              <p className="text-3xl font-extrabold">৳ 1,499 <span className="text-xs font-normal text-muted-foreground">/ month</span></p>
               <p className="text-xs text-muted-foreground">For commercial towers, caretakers, and property management firms.</p>
 
               <ul className="space-y-2 text-xs text-foreground/80 pt-2">
@@ -127,43 +128,17 @@ export default function PricingPage() {
           </Card>
         </div>
 
-        {/* Pricing FAQ Section */}
-        <section className="space-y-6 pt-8 border-t border-border">
-          <div className="text-center space-y-2">
-            <h2 className="text-2xl font-bold">Frequently Asked Questions</h2>
-            <p className="text-xs sm:text-sm text-muted-foreground">Everything you need to know about BashaBari subscriptions.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto text-xs sm:text-sm">
-            <Card className="p-5 border-border bg-card space-y-2">
-              <h4 className="font-bold text-foreground">How does the 5-Day Free Trial work?</h4>
-              <p className="text-muted-foreground leading-relaxed">
-                When you create an account, your organization automatically gets full access to all features for 5 days. No payment details are required.
-              </p>
-            </Card>
-
-            <Card className="p-5 border-border bg-card space-y-2">
-              <h4 className="font-bold text-foreground">How do tenants pay rent?</h4>
-              <p className="text-muted-foreground leading-relaxed">
-                Tenants can log into the Tenant Portal or click the SMS link to pay via bKash, Nagad, Rocket, or Bank Card through SSLCommerz.
-              </p>
-            </Card>
-
-            <Card className="p-5 border-border bg-card space-y-2">
-              <h4 className="font-bold text-foreground">Can I manage multiple buildings under 1 account?</h4>
-              <p className="text-muted-foreground leading-relaxed">
-                Yes! The Enterprise Caretaker plan supports unlimited buildings, flat units, and staff members across Bangladesh.
-              </p>
-            </Card>
-
-            <Card className="p-5 border-border bg-card space-y-2">
-              <h4 className="font-bold text-foreground">What currency precision is used?</h4>
-              <p className="text-muted-foreground leading-relaxed">
-                BashaBari uses the Integer Poisha Standard (`1 BDT = 100 poisha`) for exact financial precision without rounding errors.
-              </p>
-            </Card>
-          </div>
-        </section>
+        {/* Quick Link to Dedicated FAQ */}
+        <div className="text-center bg-accent/40 border border-border p-6 rounded-2xl space-y-3 max-w-2xl mx-auto">
+          <HelpCircle className="w-8 h-8 text-primary mx-auto" />
+          <h3 className="text-lg font-bold">Have Questions About Payments or Security?</h3>
+          <p className="text-xs text-muted-foreground">
+            Visit our dedicated FAQ page for detailed answers regarding rent invoicing, sub-meters, bKash/Nagad checkout, and tenant protection.
+          </p>
+          <Button asChild variant="outline" size="sm" className="font-bold">
+            <Link href="/faq">Visit Dedicated FAQ Page <ArrowRight className="w-3.5 h-3.5 ml-1" /></Link>
+          </Button>
+        </div>
       </main>
 
       {/* Footer */}

@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Home, Receipt, Wrench, LogOut, Loader2, UserCheck, ArrowLeft, Building2 } from "lucide-react";
+import { Home, Receipt, Wrench, LogOut, Loader2, UserCheck, ArrowLeft, Building2, BookOpen } from "lucide-react";
 
 export default function TenantPortalLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -39,6 +39,7 @@ export default function TenantPortalLayout({ children }: { children: ReactNode }
     { href: "/tenant-portal", label: "Tenant Dashboard", icon: Home },
     { href: "/tenant-portal/invoices", label: "My Rent & Invoices", icon: Receipt },
     { href: "/tenant-portal/maintenance", label: "Maintenance Tickets", icon: Wrench },
+    { href: "/tenant-portal/guide", label: "User Guide & Tutorial", icon: BookOpen },
   ];
 
   return (
@@ -62,6 +63,12 @@ export default function TenantPortalLayout({ children }: { children: ReactNode }
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <Button asChild variant="ghost" size="sm" className="hidden md:inline-flex text-xs font-semibold">
+            <Link href="/tenant-portal/guide">
+              <BookOpen className="w-3.5 h-3.5 mr-1" /> User Guide
+            </Link>
+          </Button>
+
           <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground font-semibold bg-accent/50 px-2.5 py-1 rounded-md border border-border">
             <UserCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>{user?.name}</span>

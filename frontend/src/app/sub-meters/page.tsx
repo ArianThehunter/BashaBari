@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Zap, Gauge, Landmark, ArrowLeft, ArrowRight, CheckCircle2, ShieldCheck } from "lucide-react";
@@ -22,6 +22,7 @@ export default function SubMetersPage() {
           <Link href="/who-its-for" className="hover:text-foreground transition-colors">Who It&apos;s For</Link>
           <Link href="/sub-meters" className="text-foreground font-bold">Sub-Meters</Link>
           <Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
+          <Link href="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
           <Link href="/tenant-portal" className="hover:text-foreground transition-colors">Tenant Portal</Link>
           <Link href="/compliance" className="hover:text-foreground transition-colors">Legal Act 1992</Link>
           <Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link>
@@ -98,28 +99,33 @@ export default function SubMetersPage() {
           </Card>
         </div>
 
-        {/* Calculation Formula Showcase */}
+        {/* Clean Visual Billing Feature Card (Math Formula Removed) */}
         <Card className="border-border bg-card p-6 sm:p-8 space-y-6 shadow-sm">
           <div className="space-y-2 border-b border-border pb-4">
-            <Badge variant="outline" className="text-xs font-mono">Poisha Precision Standard (BD-MONEY)</Badge>
-            <h2 className="text-2xl font-bold">Mathematical Billing Formula</h2>
+            <Badge variant="outline" className="text-xs">Zero Manual Calculations Needed</Badge>
+            <h2 className="text-2xl font-bold">How BashaBari Calculates Sub-Meters Automatically</h2>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              All utility billing operations use the integer poisha standard (`1 BDT = 100 poisha`) to prevent rounding discrepancies.
+              Simply enter the current month&apos;s meter reading for each flat. BashaBari handles the rest.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 font-mono text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
             <div className="p-4 rounded-xl bg-accent/40 border border-border space-y-2">
-              <p className="font-bold text-sm text-foreground font-sans">Formula 1: Unit Consumption</p>
-              <p className="text-muted-foreground">`units_consumed = current_reading - previous_reading`</p>
-              <p className="text-muted-foreground">`utility_charge = units_consumed * rate_per_unit_poisha`</p>
+              <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs">1</span>
+              <p className="font-bold text-sm text-foreground">Caretaker Input</p>
+              <p className="text-muted-foreground">Enter current reading (e.g. 650 kWh) into the Caretaker Portal or App.</p>
             </div>
 
             <div className="p-4 rounded-xl bg-accent/40 border border-border space-y-2">
-              <p className="font-bold text-sm text-foreground font-sans">Formula 2: Sample Calculation</p>
-              <p className="text-foreground font-semibold">Flat B-302 (DESCO Sub-Meter #MTR-8890)</p>
-              <p className="text-muted-foreground">Previous: 450 kWh | Current: 650 kWh</p>
-              <p className="text-amber-600 dark:text-amber-400 font-bold">200 Units @ ৳ 9.00/unit = ৳ 1,800.00</p>
+              <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs">2</span>
+              <p className="font-bold text-sm text-foreground">Instant Tariff Calculation</p>
+              <p className="text-muted-foreground">BashaBari subtracts previous reading (450 kWh) and applies official utility tariffs.</p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-accent/40 border border-border space-y-2">
+              <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs">3</span>
+              <p className="font-bold text-sm text-foreground">Auto Invoice &amp; SMS</p>
+              <p className="text-muted-foreground">Tenant receives itemized invoice via SMS with 1-click bKash/Nagad checkout.</p>
             </div>
           </div>
         </Card>

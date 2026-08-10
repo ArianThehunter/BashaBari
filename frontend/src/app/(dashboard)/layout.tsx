@@ -32,6 +32,7 @@ import {
   Receipt,
   Zap,
   Scale,
+  BookOpen,
 } from "lucide-react";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -45,7 +46,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     isLoadingOrganizations,
   } = useOrganization();
 
-  const [mounted] = useState(() => typeof window !== "undefined");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Redirect to login if unauthenticated
   useEffect(() => {
@@ -89,6 +94,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: Home },
+    { href: "/dashboard/guide", label: "User Guide & Tutorial", icon: BookOpen },
     { href: "/properties", label: "Properties", icon: Building2 },
     { href: "/tenants", label: "Tenants", icon: Users },
     { href: "/leases", label: "Leases", icon: FileText },
