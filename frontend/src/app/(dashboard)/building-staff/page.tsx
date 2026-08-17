@@ -10,17 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Key, UserCheck, Building2, UserPlus, DollarSign, Wrench, Clock, FileText, CheckCircle2 } from "lucide-react";
+import { Shield, UserCheck, UserPlus, DollarSign, Wrench, FileText } from "lucide-react";
 
 export default function BuildingStaffPage() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"staff" | "vendor_logs">("staff");
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
   const [isVendorLogOpen, setIsVendorLogOpen] = useState(false);
-  const [selectedStaff, setSelectedStaff] = useState<BuildingStaff | null>(null);
-  const [isPaySalaryOpen, setIsPaySalaryOpen] = useState(false);
-  const [salaryAmount, setSalaryAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "bkash" | "nagad">("cash");
 
   // Form State for New Staff
   const [newStaff, setNewStaff] = useState<CreateStaffInput>({
@@ -69,16 +65,6 @@ export default function BuildingStaffPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["building-staff"] });
       setIsAddStaffOpen(false);
-    },
-  });
-
-  const paySalaryMutation = useMutation({
-    mutationFn: ({ id, amount, payment_method }: { id: number; amount: number; payment_method: "cash" | "bkash" | "nagad" }) =>
-      staffService.paySalary(id, { amount, payment_method }),
-    onSuccess: (data) => {
-      alert(`Salary Paid Successfully! Cash Voucher Generated: ${data.voucher_number}`);
-      queryClient.invalidateQueries({ queryKey: ["building-staff"] });
-      setIsPaySalaryOpen(false);
     },
   });
 

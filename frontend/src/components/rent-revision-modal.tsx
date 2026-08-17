@@ -119,8 +119,9 @@ export function RentRevisionModal({
       setTimeout(() => {
         onClose();
       }, 1800);
-    } catch (err: any) {
-      setErrorMsg(err.message || "An unexpected error occurred.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unexpected error occurred.";
+      setErrorMsg(message);
     } finally {
       setIsSubmitting(false);
     }

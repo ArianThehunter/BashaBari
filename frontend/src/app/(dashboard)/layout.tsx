@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useOrganization } from "@/hooks/use-organization";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,8 @@ import {
   BookOpen,
 } from "lucide-react";
 
+const emptySubscribe = () => () => {};
+
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -46,11 +48,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     isLoadingOrganizations,
   } = useOrganization();
 
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
   // Redirect to login if unauthenticated
   useEffect(() => {
