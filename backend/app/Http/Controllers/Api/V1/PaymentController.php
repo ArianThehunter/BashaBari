@@ -11,6 +11,7 @@ use App\Services\Payment\Drivers\MockSSLCommerzDriver;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -136,65 +137,81 @@ class PaymentController extends Controller
             'tran_id' => ['required', 'string'],
         ]);
 
-        $payment = Payment::where('transaction_number', $request->tran_id)->first();
+        $tranId = $request->tran_id;
+        $lock = Cache::lock("payment_process_{$tranId}", 15);
 
-        if (! $payment) {
-            return response()->json(['message' => 'Payment transaction not found.'], 404);
-        }
+        // Acquire lock with 5-second wait to prevent duplicate concurrent callback executions
+        return $lock->block(5, function () use ($request, $tranId) {
+            $payment = Payment::where('transaction_number', $tranId)->first();
 
-        if ($payment->status === 'completed') {
-            return response()->json([
-                'message' => 'Payment already completed.',
-                'data' => $payment->load(['invoice', 'tenant']),
-            ]);
-        }
-
-        $driver = new MockSSLCommerzDriver();
-        $valId = $request->input('val_id') ?: 'VAL-SSL-'.Str::random(10);
-        $verification = $driver->verifyPayment($valId, $request->all());
-
-        return DB::transaction(function () use ($payment, $verification, $request) {
-            $payment->update([
-                'status' => 'completed',
-                'val_id' => $verification['val_id'],
-                'bank_tran_id' => $verification['bank_tran_id'],
-                'card_type' => $verification['card_type'],
-                'card_no' => $verification['card_no'],
-                'raw_response' => $verification['raw_payload'],
-            ]);
-
-            // Auto-reconcile invoice
-            if ($payment->invoice_id) {
-                $invoice = Invoice::find($payment->invoice_id);
-                if ($invoice) {
-                    $newPaidAmount = $invoice->paid_amount + $payment->amount;
-                    $newDueAmount = max(0, $invoice->total_amount - $newPaidAmount);
-                    $newStatus = ($newDueAmount === 0) ? 'paid' : 'partially_paid';
-
-                    $invoice->update([
-                        'paid_amount' => $newPaidAmount,
-                        'due_amount' => $newDueAmount,
-                        'status' => $newStatus,
-                    ]);
-                }
+            if (! $payment) {
+                return response()->json(['message' => 'Payment transaction not found.'], 404);
             }
 
-            // Create double-entry ledger record
-            LedgerEntry::create([
-                'organization_id' => $payment->organization_id,
-                'payment_id' => $payment->id,
-                'invoice_id' => $payment->invoice_id,
-                'type' => 'income',
-                'category' => 'rent',
-                'amount' => $payment->amount,
-                'entry_date' => Carbon::today()->toDateString(),
-                'description' => "Rent Payment via SSLCommerz ({$verification['card_type']}) - Tran #: {$payment->transaction_number}",
-            ]);
+            if ($payment->status === 'completed') {
+                return response()->json([
+                    'message' => 'Payment already completed.',
+                    'data' => $payment->load(['invoice', 'tenant']),
+                ]);
+            }
 
-            return response()->json([
-                'message' => 'SSLCommerz payment authorized & reconciled successfully.',
-                'data' => $payment->load(['invoice', 'tenant', 'unit']),
-            ]);
+            $driver = new MockSSLCommerzDriver();
+            $valId = $request->input('val_id') ?: 'VAL-SSL-'.Str::random(10);
+            $verification = $driver->verifyPayment($valId, $request->all());
+
+            return DB::transaction(function () use ($payment, $verification) {
+                // Re-query with row lock inside transaction
+                $lockedPayment = Payment::where('id', $payment->id)->lockForUpdate()->first();
+
+                if ($lockedPayment->status === 'completed') {
+                    return response()->json([
+                        'message' => 'Payment already completed.',
+                        'data' => $lockedPayment->load(['invoice', 'tenant']),
+                    ]);
+                }
+
+                $lockedPayment->update([
+                    'status' => 'completed',
+                    'val_id' => $verification['val_id'],
+                    'bank_tran_id' => $verification['bank_tran_id'],
+                    'card_type' => $verification['card_type'],
+                    'card_no' => $verification['card_no'],
+                    'raw_response' => $verification['raw_payload'],
+                ]);
+
+                // Auto-reconcile invoice
+                if ($lockedPayment->invoice_id) {
+                    $invoice = Invoice::where('id', $lockedPayment->invoice_id)->lockForUpdate()->first();
+                    if ($invoice) {
+                        $newPaidAmount = $invoice->paid_amount + $lockedPayment->amount;
+                        $newDueAmount = max(0, $invoice->total_amount - $newPaidAmount);
+                        $newStatus = ($newDueAmount === 0) ? 'paid' : 'partially_paid';
+
+                        $invoice->update([
+                            'paid_amount' => $newPaidAmount,
+                            'due_amount' => $newDueAmount,
+                            'status' => $newStatus,
+                        ]);
+                    }
+                }
+
+                // Create double-entry ledger record
+                LedgerEntry::create([
+                    'organization_id' => $lockedPayment->organization_id,
+                    'payment_id' => $lockedPayment->id,
+                    'invoice_id' => $lockedPayment->invoice_id,
+                    'type' => 'income',
+                    'category' => 'rent',
+                    'amount' => $lockedPayment->amount,
+                    'entry_date' => Carbon::today()->toDateString(),
+                    'description' => "Rent Payment via SSLCommerz ({$verification['card_type']}) - Tran #: {$lockedPayment->transaction_number}",
+                ]);
+
+                return response()->json([
+                    'message' => 'SSLCommerz payment authorized & reconciled successfully.',
+                    'data' => $lockedPayment->load(['invoice', 'tenant', 'unit']),
+                ]);
+            });
         });
     }
 

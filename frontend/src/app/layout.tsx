@@ -38,7 +38,12 @@ export const metadata: Metadata = {
     "DWASA",
     "expense tracking",
   ],
-  authors: [{ name: "BashaBari" }],
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "BashaBari",
+  },
   openGraph: {
     title: "BashaBari | Property Operations Platform for Bangladesh",
     description:

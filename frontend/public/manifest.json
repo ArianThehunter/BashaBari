@@ -1,16 +1,34 @@
 {
-  "name": "Bariwala Hub (বাসাবাড়ি - Property & Rent Management)",
-  "short_name": "Bariwala",
-  "description": "All-in-one property, rent, caretaker, and tenant management platform for Bangladesh.",
+  "name": "BashaBari - Property Operations SaaS",
+  "short_name": "BashaBari",
+  "description": "All-in-one property operations, automated rent collection, and tenant management for Bangladesh.",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "/favicon.ico",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Tenant Portal",
+      "url": "/tenant-portal",
+      "description": "View outstanding rent dues and pay online"
+    },
+    {
+      "name": "Invoices",
+      "url": "/invoices",
+      "description": "Manage organization invoices and receipts"
+    },
+    {
+      "name": "Building Staff",
+      "url": "/building-staff",
+      "description": "Staff duty logs and salary disbursements"
     }
   ]
 }
