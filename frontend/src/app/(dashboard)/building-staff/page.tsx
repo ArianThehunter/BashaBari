@@ -17,6 +17,10 @@ export default function BuildingStaffPage() {
   const [activeTab, setActiveTab] = useState<"staff" | "vendor_logs">("staff");
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
   const [isVendorLogOpen, setIsVendorLogOpen] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState<BuildingStaff | null>(null);
+  const [isPaySalaryOpen, setIsPaySalaryOpen] = useState(false);
+  const [salaryAmount, setSalaryAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "bkash" | "nagad">("cash");
 
   // Form State for New Staff
   const [newStaff, setNewStaff] = useState<CreateStaffInput>({
@@ -32,7 +36,7 @@ export default function BuildingStaffPage() {
     agency_name: "",
     shift_type: "day_shift",
     shift_hours: "08:00 AM - 08:00 PM",
-    monthly_salary: 1500000, // ৳15,000 in poisha
+    monthly_salary: 1500000, // à§³15,000 in poisha
   });
 
   // Form State for Technician Entry Log
@@ -158,7 +162,7 @@ export default function BuildingStaffPage() {
 
                   <div className="p-3 rounded-lg bg-accent/40 border border-border space-y-1 font-mono text-[11px]">
                     <p><span className="text-muted-foreground font-sans">Shift:</span> {staff.shift_hours}</p>
-                    <p><span className="text-muted-foreground font-sans">Salary:</span> ৳ {(staff.monthly_salary / 100).toLocaleString("en-BD")}/mo</p>
+                    <p><span className="text-muted-foreground font-sans">Salary:</span> à§³ {(staff.monthly_salary / 100).toLocaleString("en-BD")}/mo</p>
                   </div>
 
                   <Button
@@ -200,10 +204,10 @@ export default function BuildingStaffPage() {
                   <div key={log.id} className="p-4 rounded-xl border border-border bg-background flex items-center justify-between text-xs">
                     <div className="space-y-1">
                       <p className="font-bold text-sm text-foreground">{log.technician_name} ({log.company_name})</p>
-                      <p className="text-muted-foreground">{log.purpose_of_visit} • Category: {log.service_category}</p>
+                      <p className="text-muted-foreground">{log.purpose_of_visit} â€¢ Category: {log.service_category}</p>
                     </div>
                     <div className="text-right font-mono">
-                      <p className="font-bold text-emerald-600 dark:text-emerald-400">৳ {log.amount_paid.toLocaleString("en-BD")}</p>
+                      <p className="font-bold text-emerald-600 dark:text-emerald-400">à§³ {log.amount_paid.toLocaleString("en-BD")}</p>
                       <p className="text-muted-foreground text-[10px]">{new Date(log.entry_time).toLocaleString("en-GB")}</p>
                     </div>
                   </div>
@@ -281,6 +285,60 @@ export default function BuildingStaffPage() {
               <div className="flex justify-end gap-2 pt-4 border-t border-border">
                 <Button variant="outline" size="sm" onClick={() => setIsVendorLogOpen(false)}>Cancel</Button>
                 <Button size="sm" onClick={() => createVendorLogMutation.mutate(newVisit)}>Log Technician Entry</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal 3: Pay Salary */}
+      {isPaySalaryOpen && selectedStaff && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md border-border bg-card shadow-2xl">
+            <CardHeader>
+              <CardTitle className="text-lg font-bold">Pay Staff Salary</CardTitle>
+              <CardDescription className="text-xs">
+                Issue monthly salary payment for {selectedStaff.name}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-xs">
+              <div className="space-y-1">
+                <Label>Monthly Salary Amount (BDT)</Label>
+                <Input
+                  type="number"
+                  value={salaryAmount}
+                  onChange={(e) => setSalaryAmount(e.target.value)}
+                  placeholder="15000"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Payment Method</Label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value as "cash" | "bkash" | "nagad")}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs"
+                >
+                  <option value="cash">Cash Voucher</option>
+                  <option value="bkash">bKash MFS</option>
+                  <option value="nagad">Nagad MFS</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-2 pt-4 border-t border-border">
+                <Button variant="outline" size="sm" onClick={() => setIsPaySalaryOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() =>
+                    paySalaryMutation.mutate({
+                      id: selectedStaff.id,
+                      amount: Math.round((parseFloat(salaryAmount) || 0) * 100),
+                      payment_method: paymentMethod,
+                    })
+                  }
+                >
+                  Confirm &amp; Issue Voucher
+                </Button>
               </div>
             </CardContent>
           </Card>
