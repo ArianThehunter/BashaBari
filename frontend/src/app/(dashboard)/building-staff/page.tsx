@@ -72,6 +72,16 @@ export default function BuildingStaffPage() {
     },
   });
 
+  const paySalaryMutation = useMutation({
+    mutationFn: ({ id, amount, payment_method }: { id: number; amount: number; payment_method: "cash" | "bkash" | "nagad" }) =>
+      staffService.paySalary(id, { amount, payment_method }),
+    onSuccess: (data) => {
+      alert(`Salary Paid Successfully! Cash Voucher Generated: ${data.voucher_number}`);
+      queryClient.invalidateQueries({ queryKey: ["building-staff"] });
+      setIsPaySalaryOpen(false);
+    },
+  });
+
   const createVendorLogMutation = useMutation({
     mutationFn: (data: CreateVendorVisitInput) => vendorLogService.createVendorLog(data),
     onSuccess: () => {
