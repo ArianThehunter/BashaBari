@@ -33,11 +33,31 @@ class UtilityAndSmsTest extends TestCase
         $this->assertDatabaseHas('utility_providers', ['code' => 'DWASA']);
 
         $user = User::factory()->create();
+        $org = Organization::factory()->create();
 
-        $response = $this->actingAs($user)->getJson('/api/v1/utility-providers');
+        OrganizationMember::create([
+            'user_id' => $user->id,
+            'organization_id' => $org->id,
+            'is_owner' => true,
+            'status' => 'active',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->withHeader('X-Organization-Id', $org->id)
+            ->getJson('/api/v1/utility-providers');
 
         $response->assertStatus(200)
             ->assertJsonPath('meta.total', 10);
+    }
+
+    public function test_utility_providers_are_not_readable_without_an_organization(): void
+    {
+        // A user with no active membership must not reach org-scoped data.
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->getJson('/api/v1/utility-providers')
+            ->assertStatus(403);
     }
 
     public function test_user_can_log_meter_reading_and_calculate_cost(): void
@@ -74,7 +94,7 @@ class UtilityAndSmsTest extends TestCase
 
     public function test_mock_bd_sms_driver_dispatches_successfully(): void
     {
-        $driver = new MockBDSmsDriver();
+        $driver = new MockBDSmsDriver;
         $sent = $driver->sendSms('01711223344', 'Your rent invoice INV-202608-001 of 15,000 BDT is due.');
 
         $this->assertTrue($sent);
