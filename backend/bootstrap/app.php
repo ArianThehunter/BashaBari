@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Middleware\EnsureOrganizationPermission;
 use App\Http\Middleware\RequestIdMiddleware;
 use App\Http\Middleware\SetCurrentOrganization;
+use App\Http\Middleware\SetTenantPortalOrganization;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,8 +18,21 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
+
+        // Laravel does not throttle API routes by default; without this the
+        // entire authenticated API is unlimited.
+        $middleware->throttleApi('api');
+
         $middleware->append(RequestIdMiddleware::class);
-        $middleware->append(SetCurrentOrganization::class);
+
+        // Tenancy middleware is opt-in per route group rather than global, so
+        // that onboarding and tenant-portal routes (which have no organization
+        // membership) are not locked out.
+        $middleware->alias([
+            'organization' => SetCurrentOrganization::class,
+            'org.permission' => EnsureOrganizationPermission::class,
+            'tenant.portal' => SetTenantPortalOrganization::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

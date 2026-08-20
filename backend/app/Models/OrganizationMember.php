@@ -41,4 +41,66 @@ class OrganizationMember extends Model
     {
         return $this->belongsTo(Role::class);
     }
+
+    /**
+     * Does this membership grant the named permission (e.g. "properties.create")?
+     *
+     * Organization owners implicitly hold every permission. Everyone else is
+     * resolved against their assigned role, and denied when they have none.
+     */
+    public function hasPermission(string $permission): bool
+    {
+        if ($this->is_owner) {
+            return true;
+        }
+
+        if (! $this->role_id) {
+            return false;
+        }
+
+        $this->loadMissing('role.permissions');
+
+        return (bool) $this->role?->permissions->contains('name', $permission);
+    }
+
+    /**
+     * The role slug for this membership ("owner", "caretaker", ...).
+     *
+     * Owners are reported as "owner" even when no role row is attached, which
+     * is how memberships created during organization setup are stored.
+     */
+    public function roleSlug(): ?string
+    {
+        if ($this->role_id) {
+            $this->loadMissing('role');
+
+            if ($this->role?->slug) {
+                return $this->role->slug;
+            }
+        }
+
+        return $this->is_owner ? 'owner' : null;
+    }
+
+    /**
+     * Is this membership restricted to a subset of the organization's properties?
+     */
+    public function hasRestrictedPropertyAccess(): bool
+    {
+        return ! $this->is_owner && ! empty($this->property_access);
+    }
+
+    /**
+     * Property ids this membership may act on, or null when unrestricted.
+     *
+     * @return array<int, int>|null
+     */
+    public function accessiblePropertyIds(): ?array
+    {
+        if (! $this->hasRestrictedPropertyAccess()) {
+            return null;
+        }
+
+        return array_map('intval', $this->property_access);
+    }
 }
