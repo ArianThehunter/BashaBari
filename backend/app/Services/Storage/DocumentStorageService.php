@@ -28,9 +28,7 @@ class DocumentStorageService
     /**
      * Securely store a tenant NID or premises verification document.
      *
-     * @param  UploadedFile  $file
-     * @param  string  $organizationId
-     * @param  string  $category ('nid_front', 'nid_back', 'dmp_form', 'meter_photo', 'lease_agreement')
+     * @param  string  $category  ('nid_front', 'nid_back', 'dmp_form', 'meter_photo', 'lease_agreement')
      * @return array{path: string, url: string, filename: string, mime: string, size: int}
      */
     public function storeDocument(UploadedFile $file, string $organizationId, string $category = 'general'): array
@@ -72,7 +70,7 @@ class DocumentStorageService
         }
 
         // Fallback for local storage (generates local route)
-        return url("/api/v1/documents/download?path=".urlencode($path));
+        return url('/api/v1/documents/download?path='.urlencode($path));
     }
 
     /**

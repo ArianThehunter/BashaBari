@@ -14,7 +14,7 @@ class MockBDSmsDriver implements SmsGatewayInterface
     public function sendSms(string $recipientPhone, string $message): bool
     {
         $cleanPhone = preg_replace('/[^0-9]/', '', $recipientPhone);
-        $referenceId = 'SMS-BD-' . Str::upper(Str::random(10));
+        $referenceId = 'SMS-BD-'.Str::upper(Str::random(10));
 
         Log::info("MockBDSmsDriver: Dispatched SMS alert to [{$cleanPhone}]", [
             'reference_id' => $referenceId,
@@ -32,10 +32,18 @@ class MockBDSmsDriver implements SmsGatewayInterface
      */
     private function detectOperator(string $phone): string
     {
-        if (str_contains($phone, '017') || str_contains($phone, '013')) return 'Grameenphone';
-        if (str_contains($phone, '018') || str_contains($phone, '016')) return 'Robi / Airtel';
-        if (str_contains($phone, '019') || str_contains($phone, '014')) return 'Banglalink';
-        if (str_contains($phone, '015')) return 'Teletalk';
+        if (str_contains($phone, '017') || str_contains($phone, '013')) {
+            return 'Grameenphone';
+        }
+        if (str_contains($phone, '018') || str_contains($phone, '016')) {
+            return 'Robi / Airtel';
+        }
+        if (str_contains($phone, '019') || str_contains($phone, '014')) {
+            return 'Banglalink';
+        }
+        if (str_contains($phone, '015')) {
+            return 'Teletalk';
+        }
 
         return 'BD Telco';
     }

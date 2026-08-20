@@ -2,8 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Expense;
-use App\Models\MaintenanceRequest;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\Property;

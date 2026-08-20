@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\LedgerEntry;
 use App\Models\OrganizationMember;
@@ -63,11 +64,11 @@ class FinancialReportController extends Controller
             ->take(10)
             ->get();
 
-        $staffPayrollPoisha = \App\Models\Expense::where('organization_id', $orgId)
+        $staffPayrollPoisha = Expense::where('organization_id', $orgId)
             ->where('category', 'staff_salary')
             ->sum('amount');
 
-        $propertyRepairsPoisha = \App\Models\Expense::where('organization_id', $orgId)
+        $propertyRepairsPoisha = Expense::where('organization_id', $orgId)
             ->whereIn('category', ['repairs', 'maintenance', 'plumbing', 'electrical'])
             ->sum('amount');
 
