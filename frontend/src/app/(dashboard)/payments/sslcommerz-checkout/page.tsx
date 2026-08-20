@@ -13,8 +13,12 @@ function SslcommerzCheckoutContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const tranId = searchParams.get("tran_id") || "TRX-202608-888";
+  // These arrive from the checkout URL the backend signed. They are forwarded
+  // untouched; the server re-verifies the signature before crediting anything.
+  const tranId = searchParams.get("tran_id") ?? "";
   const invoiceId = searchParams.get("invoice_id");
+  const amount = searchParams.get("amount") ?? "";
+  const signature = searchParams.get("signature") ?? "";
 
   const [selectedChannel, setSelectedChannel] = useState<string>("BKASH-BKASH");
   const [accountNo, setAccountNo] = useState("01712345678");
@@ -31,15 +35,26 @@ function SslcommerzCheckoutContent() {
   ];
 
   const handleSimulateSuccess = async () => {
+    if (!tranId || !signature) {
+      setErrorMessage(
+        "This checkout link is incomplete. Start the payment again from the invoice.",
+      );
+      return;
+    }
+
     setIsProcessing(true);
     setErrorMessage(null);
     try {
       await paymentService.completeSslcommerzSuccess({
         tran_id: tranId,
+        amount,
+        signature,
         val_id: `VAL-SSL-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
         card_type: selectedChannel,
         bank_tran_id: `BANK-${Date.now()}`,
-        card_no: accountNo ? `${accountNo.substring(0, 4)}****${accountNo.substring(accountNo.length - 3)}` : "0171****890",
+        card_no: accountNo
+          ? `${accountNo.substring(0, 4)}****${accountNo.substring(accountNo.length - 3)}`
+          : "0171****890",
       });
 
       if (invoiceId) {

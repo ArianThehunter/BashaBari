@@ -3,46 +3,38 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\InitiateSslcommerzRequest;
+use App\Http\Requests\StorePaymentRequest;
 use App\Models\Invoice;
 use App\Models\LedgerEntry;
-use App\Models\OrganizationMember;
 use App\Models\Payment;
-use App\Services\Payment\Drivers\MockSSLCommerzDriver;
+use App\Services\Payment\PaymentGatewayInterface;
+use App\Services\Payment\PaymentReconciler;
+use App\Support\OrganizationContext;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
+    public function __construct(
+        private readonly PaymentGatewayInterface $gateway,
+        private readonly PaymentReconciler $reconciler,
+        private readonly OrganizationContext $context,
+    ) {}
+
     /**
-     * Display listing of organization payments.
+     * Paginated listing of the organization's payments.
      */
     public function index(Request $request): JsonResponse
     {
-        $organizationId = $request->header('X-Organization-Id') ?: $request->query('organization_id');
-        $user = $request->user();
-
-        $member = OrganizationMember::where('user_id', $user->id)
-            ->where('status', 'active')
-            ->when($organizationId, fn ($q) => $q->where('organization_id', $organizationId))
-            ->first();
-
-        if (! $member) {
-            return response()->json(['message' => 'No active organization selected.'], 400);
-        }
-
-        $method = $request->query('payment_method');
-        $status = $request->query('status');
-        $search = $request->query('search');
-
-        $query = Payment::query()
-            ->where('organization_id', $member->organization_id)
-            ->when($method, fn ($q) => $q->where('payment_method', $method))
-            ->when($status, fn ($q) => $q->where('status', $status))
-            ->when($search, function ($q, $term) {
+        $payments = Payment::query()
+            ->when($request->query('payment_method'), fn ($q, $v) => $q->where('payment_method', $v))
+            ->when($request->query('status'), fn ($q, $v) => $q->where('status', $v))
+            ->when($request->query('search'), function ($q, $term) {
                 $q->where(function ($sub) use ($term) {
                     $sub->where('transaction_number', 'like', "%{$term}%")
                         ->orWhere('val_id', 'like', "%{$term}%")
@@ -51,307 +43,254 @@ class PaymentController extends Controller
                 });
             })
             ->with(['tenant', 'unit', 'invoice'])
-            ->latest('payment_date');
+            ->latest('payment_date')
+            ->paginate($request->integer('per_page', 25))
+            ->withQueryString();
 
-        $payments = $query->get();
-
-        $totalCollectedPoisha = Payment::where('organization_id', $member->organization_id)
-            ->where('status', 'completed')
-            ->sum('amount');
-
-        $totalRefundedPoisha = Payment::where('organization_id', $member->organization_id)
-            ->where('status', 'refunded')
-            ->sum('amount');
+        $totals = Payment::query()
+            ->selectRaw("COALESCE(SUM(CASE WHEN status = 'completed' THEN amount END), 0) as collected")
+            ->selectRaw("COALESCE(SUM(CASE WHEN status = 'refunded' THEN amount END), 0) as refunded")
+            ->first();
 
         return response()->json([
-            'data' => $payments,
+            'data' => $payments->items(),
             'meta' => [
-                'total_collected_poisha' => (int) $totalCollectedPoisha,
-                'total_refunded_poisha' => (int) $totalRefundedPoisha,
+                'current_page' => $payments->currentPage(),
+                'last_page' => $payments->lastPage(),
+                'per_page' => $payments->perPage(),
+                'total' => $payments->total(),
+                'total_collected_poisha' => (int) $totals->collected,
+                'total_refunded_poisha' => (int) $totals->refunded,
             ],
         ]);
     }
 
     /**
-     * Initiate SSLCommerz checkout session for an invoice.
+     * Open a gateway checkout session for an invoice.
      */
-    public function initiateSslcommerz(Request $request): JsonResponse
+    public function initiateSslcommerz(InitiateSslcommerzRequest $request): JsonResponse
     {
-        $organizationId = $request->header('X-Organization-Id') ?: $request->input('organization_id');
-        $user = $request->user();
-
-        $member = OrganizationMember::where('user_id', $user->id)
-            ->where('status', 'active')
-            ->when($organizationId, fn ($q) => $q->where('organization_id', $organizationId))
-            ->first();
-
-        if (! $member) {
-            return response()->json(['message' => 'No active organization selected.'], 400);
-        }
-
-        $request->validate([
-            'invoice_id' => ['required', 'exists:invoices,id'],
-        ]);
-
-        $invoice = Invoice::where('organization_id', $member->organization_id)
-            ->findOrFail($request->invoice_id);
+        // Org-scoped by the global scope; a foreign invoice id 404s.
+        $invoice = Invoice::with('tenant')->findOrFail($request->validated('invoice_id'));
 
         if ($invoice->due_amount <= 0) {
             return response()->json(['message' => 'Invoice is already fully paid.'], 422);
         }
 
-        $driver = new MockSSLCommerzDriver();
-        $session = $driver->initiatePayment($invoice);
+        $transactionId = PaymentReconciler::newTransactionId();
 
-        // Store pending payment record
+        $session = $this->gateway->initiatePayment($invoice, $transactionId);
+
         Payment::create([
-            'organization_id' => $member->organization_id,
+            'organization_id' => $this->context->idOrFail(),
             'invoice_id' => $invoice->id,
             'tenant_id' => $invoice->tenant_id,
             'unit_id' => $invoice->unit_id,
-            'transaction_number' => $session['tran_id'],
-            'payment_method' => 'sslcommerz',
+            'transaction_number' => $transactionId,
+            'payment_method' => $this->gateway->name(),
             'amount' => $invoice->due_amount,
             'store_amount' => $invoice->due_amount,
             'currency' => 'BDT',
-            'payment_date' => Carbon::today()->toDateString(),
+            'payment_date' => Carbon::today('Asia/Dhaka')->toDateString(),
             'status' => 'pending',
-            'notes' => "SSLCommerz Checkout Session Initiated for Invoice #{$invoice->invoice_number}",
+            'notes' => "Checkout session opened for invoice #{$invoice->invoice_number}",
         ]);
 
         return response()->json([
             'status' => 'SUCCESS',
-            'tran_id' => $session['tran_id'],
+            'tran_id' => $transactionId,
             'gateway_url' => $session['gateway_url'],
-            'amount_bdt' => $session['amount_bdt'],
+            'amount_bdt' => round($invoice->due_amount / 100, 2),
             'invoice_id' => $invoice->id,
         ]);
     }
 
     /**
-     * Process SSLCommerz Payment IPN / Success callback.
+     * SSLCommerz IPN / return callback.
+     *
+     * Unauthenticated by necessity — the gateway posts server-to-server and has
+     * no session. Authorization comes from the driver validating the callback
+     * out-of-band; nothing here trusts the request body. The previous
+     * implementation marked a payment captured on the strength of a posted
+     * tran_id alone.
      */
-    public function sslcommerzSuccess(Request $request): JsonResponse
+    public function sslcommerzIpn(Request $request): JsonResponse
     {
-        $request->validate([
-            'tran_id' => ['required', 'string'],
-        ]);
+        $validation = $this->gateway->validateCallback($request->all());
 
-        $tranId = $request->tran_id;
-        $lock = Cache::lock("payment_process_{$tranId}", 15);
+        if (! $validation->valid) {
+            Log::warning('Rejected SSLCommerz callback', [
+                'tran_id' => $validation->transactionId,
+                'reason' => $validation->failureReason,
+                'ip' => $request->ip(),
+            ]);
 
-        // Acquire lock with 5-second wait to prevent duplicate concurrent callback executions
-        return $lock->block(5, function () use ($request, $tranId) {
-            $payment = Payment::where('transaction_number', $tranId)->first();
+            // Deliberately vague: do not confirm whether the transaction exists.
+            return response()->json(['message' => 'Callback rejected.'], 422);
+        }
+
+        $tranId = $validation->transactionId;
+        $lock = Cache::lock("payment_capture_{$tranId}", 15);
+
+        return $lock->block(5, function () use ($validation, $tranId) {
+            // No auth context here, so look the payment up across tenants, then
+            // pin the organization for everything that follows.
+            $payment = $this->context->withoutScope(
+                fn () => Payment::query()->where('transaction_number', $tranId)->first()
+            );
 
             if (! $payment) {
-                return response()->json(['message' => 'Payment transaction not found.'], 404);
+                Log::warning('SSLCommerz callback for unknown transaction', ['tran_id' => $tranId]);
+
+                return response()->json(['message' => 'Callback rejected.'], 422);
             }
 
             if ($payment->status === 'completed') {
-                return response()->json([
-                    'message' => 'Payment already completed.',
-                    'data' => $payment->load(['invoice', 'tenant']),
-                ]);
+                return response()->json(['message' => 'Payment already recorded.']);
             }
 
-            $driver = new MockSSLCommerzDriver();
-            $valId = $request->input('val_id') ?: 'VAL-SSL-'.Str::random(10);
-            $verification = $driver->verifyPayment($valId, $request->all());
-
-            return DB::transaction(function () use ($payment, $verification) {
-                // Re-query with row lock inside transaction
-                $lockedPayment = Payment::where('id', $payment->id)->lockForUpdate()->first();
-
-                if ($lockedPayment->status === 'completed') {
-                    return response()->json([
-                        'message' => 'Payment already completed.',
-                        'data' => $lockedPayment->load(['invoice', 'tenant']),
-                    ]);
-                }
-
-                $lockedPayment->update([
-                    'status' => 'completed',
-                    'val_id' => $verification['val_id'],
-                    'bank_tran_id' => $verification['bank_tran_id'],
-                    'card_type' => $verification['card_type'],
-                    'card_no' => $verification['card_no'],
-                    'raw_response' => $verification['raw_payload'],
+            // The gateway is the authority on what was actually captured.
+            if ($validation->amountPoisha !== (int) $payment->amount) {
+                Log::critical('SSLCommerz amount mismatch', [
+                    'tran_id' => $tranId,
+                    'expected_poisha' => (int) $payment->amount,
+                    'reported_poisha' => $validation->amountPoisha,
                 ]);
 
-                // Auto-reconcile invoice
-                if ($lockedPayment->invoice_id) {
-                    $invoice = Invoice::where('id', $lockedPayment->invoice_id)->lockForUpdate()->first();
-                    if ($invoice) {
-                        $newPaidAmount = $invoice->paid_amount + $lockedPayment->amount;
-                        $newDueAmount = max(0, $invoice->total_amount - $newPaidAmount);
-                        $newStatus = ($newDueAmount === 0) ? 'paid' : 'partially_paid';
+                $payment->update(['status' => 'failed', 'notes' => 'Amount mismatch on gateway validation.']);
 
-                        $invoice->update([
-                            'paid_amount' => $newPaidAmount,
-                            'due_amount' => $newDueAmount,
-                            'status' => $newStatus,
-                        ]);
-                    }
-                }
+                return response()->json(['message' => 'Callback rejected.'], 422);
+            }
 
-                // Create double-entry ledger record
-                LedgerEntry::create([
-                    'organization_id' => $lockedPayment->organization_id,
-                    'payment_id' => $lockedPayment->id,
-                    'invoice_id' => $lockedPayment->invoice_id,
-                    'type' => 'income',
-                    'category' => 'rent',
-                    'amount' => $lockedPayment->amount,
-                    'entry_date' => Carbon::today()->toDateString(),
-                    'description' => "Rent Payment via SSLCommerz ({$verification['card_type']}) - Tran #: {$lockedPayment->transaction_number}",
-                ]);
+            return $this->context->forOrganization($payment->organization_id, function () use ($payment, $validation) {
+                $captured = $this->reconciler->capture($payment, [
+                    'val_id' => $validation->valId,
+                    'bank_tran_id' => $validation->bankTransactionId,
+                    'card_type' => $validation->cardType,
+                    'card_no' => $validation->cardNo,
+                    'raw_response' => $validation->rawPayload,
+                ], "Rent payment via SSLCommerz ({$validation->cardType}) — Tran #: {$payment->transaction_number}");
 
                 return response()->json([
-                    'message' => 'SSLCommerz payment authorized & reconciled successfully.',
-                    'data' => $lockedPayment->load(['invoice', 'tenant', 'unit']),
+                    'message' => 'Payment validated and reconciled.',
+                    'data' => ['transaction_number' => $captured->transaction_number, 'status' => $captured->status],
                 ]);
             });
         });
     }
 
     /**
-     * Record a manual offline payment (Cash, Bank Cheque, MFS Transfer).
+     * Record a manual offline payment (cash, cheque, bank or MFS transfer).
      */
-    public function store(Request $request): JsonResponse
+    public function store(StorePaymentRequest $request): JsonResponse
     {
-        $organizationId = $request->header('X-Organization-Id') ?: $request->input('organization_id');
-        $user = $request->user();
+        $data = $request->validated();
+        $amountPoisha = (int) round($data['amount_bdt'] * 100);
 
-        $member = OrganizationMember::where('user_id', $user->id)
-            ->where('status', 'active')
-            ->when($organizationId, fn ($q) => $q->where('organization_id', $organizationId))
-            ->first();
-
-        if (! $member) {
-            return response()->json(['message' => 'No active organization selected.'], 400);
-        }
-
-        $request->validate([
-            'tenant_id' => ['required', 'exists:tenants,id'],
-            'invoice_id' => ['nullable', 'exists:invoices,id'],
-            'unit_id' => ['nullable', 'exists:units,id'],
-            'payment_method' => ['required', 'string', 'in:sslcommerz,bkash,nagad,rocket,bank_transfer,cash,cheque'],
-            'amount_bdt' => ['required', 'numeric', 'min:1'],
-            'payment_date' => ['required', 'date'],
-            'reference_number' => ['nullable', 'string', 'max:100'],
-            'notes' => ['nullable', 'string'],
-        ]);
-
-        $amountPoisha = (int) round($request->amount_bdt * 100);
-        $monthStr = Carbon::parse($request->payment_date)->format('Ym');
-        $tranId = 'TRX-'.$monthStr.'-'.Str::padLeft((string) rand(100, 999), 3, '0');
-
-        return DB::transaction(function () use ($request, $member, $amountPoisha, $tranId) {
+        $payment = DB::transaction(function () use ($data, $amountPoisha) {
             $payment = Payment::create([
-                'organization_id' => $member->organization_id,
-                'invoice_id' => $request->invoice_id,
-                'tenant_id' => $request->tenant_id,
-                'unit_id' => $request->unit_id,
-                'transaction_number' => $tranId,
-                'payment_method' => $request->payment_method,
+                'organization_id' => $this->context->idOrFail(),
+                'invoice_id' => $data['invoice_id'] ?? null,
+                'tenant_id' => $data['tenant_id'],
+                'unit_id' => $data['unit_id'] ?? null,
+                'transaction_number' => PaymentReconciler::newTransactionId(
+                    Carbon::parse($data['payment_date'])
+                ),
+                'payment_method' => $data['payment_method'],
                 'amount' => $amountPoisha,
                 'store_amount' => $amountPoisha,
                 'currency' => 'BDT',
-                'payment_date' => $request->payment_date,
+                'payment_date' => $data['payment_date'],
                 'status' => 'completed',
-                'reference_number' => $request->reference_number,
-                'notes' => $request->notes,
+                'reference_number' => $data['reference_number'] ?? null,
+                'notes' => $data['notes'] ?? null,
             ]);
 
-            // Auto-reconcile invoice balance
-            if ($request->invoice_id) {
-                $invoice = Invoice::find($request->invoice_id);
-                if ($invoice) {
-                    $newPaidAmount = $invoice->paid_amount + $amountPoisha;
-                    $newDueAmount = max(0, $invoice->total_amount - $newPaidAmount);
-                    $newStatus = ($newDueAmount === 0) ? 'paid' : 'partially_paid';
+            $this->reconciler->applyToInvoice($payment);
 
-                    $invoice->update([
-                        'paid_amount' => $newPaidAmount,
-                        'due_amount' => $newDueAmount,
-                        'status' => $newStatus,
-                    ]);
-                }
-            }
-
-            // Create double-entry ledger entry
             LedgerEntry::create([
-                'organization_id' => $member->organization_id,
+                'organization_id' => $payment->organization_id,
                 'payment_id' => $payment->id,
-                'invoice_id' => $request->invoice_id,
+                'invoice_id' => $payment->invoice_id,
                 'type' => 'income',
                 'category' => 'rent',
                 'amount' => $amountPoisha,
-                'entry_date' => $request->payment_date,
-                'description' => "Manual Payment Received ({$request->payment_method}) - Tran #: {$tranId}",
+                'entry_date' => $data['payment_date'],
+                'description' => "Manual payment ({$data['payment_method']}) — Tran #: {$payment->transaction_number}",
             ]);
 
-            return response()->json([
-                'message' => 'Payment recorded successfully.',
-                'data' => $payment->load(['invoice', 'tenant', 'unit']),
-            ], 201);
+            return $payment;
         });
+
+        return response()->json([
+            'message' => 'Payment recorded successfully.',
+            'data' => $payment->load(['invoice', 'tenant', 'unit']),
+        ], 201);
     }
 
     /**
-     * Display specified payment.
+     * Display a single payment.
      */
-    public function show(Request $request, string $id): JsonResponse
+    public function show(string $id): JsonResponse
     {
-        $user = $request->user();
-
-        $payment = Payment::query()
-            ->whereHas('organization.members', function ($query) use ($user) {
-                $query->where('user_id', $user->id)->where('status', 'active');
-            })
-            ->with(['organization', 'tenant', 'unit', 'invoice', 'ledgerEntries'])
-            ->findOrFail($id);
+        $payment = Payment::with(['tenant', 'unit', 'invoice', 'ledgerEntries'])->findOrFail($id);
 
         return response()->json(['data' => $payment]);
     }
 
     /**
-     * Process BD-008 compliant payment refund.
+     * Refund a payment under the BD-008 advance rent refund policy.
      */
     public function refund(Request $request, string $id): JsonResponse
     {
-        $user = $request->user();
+        $member = $this->context->member();
 
-        $payment = Payment::query()
-            ->whereHas('organization.members', function ($query) use ($user) {
-                $query->where('user_id', $user->id)->where('is_owner', true);
-            })
-            ->findOrFail($id);
+        // Refunds move money out; restrict to organization owners.
+        if (! $request->user()?->isPlatformAdmin() && ! $member?->is_owner) {
+            return response()->json([
+                'message' => 'Only organization owners can issue refunds.',
+            ], 403);
+        }
+
+        $payment = Payment::findOrFail($id);
 
         if ($payment->status === 'refunded') {
             return response()->json(['message' => 'Payment is already refunded.'], 422);
         }
 
-        return DB::transaction(function () use ($payment) {
-            $payment->update(['status' => 'refunded']);
+        if ($payment->status !== 'completed') {
+            return response()->json(['message' => 'Only completed payments can be refunded.'], 422);
+        }
 
-            // Record refund in double-entry ledger
+        $refunded = DB::transaction(function () use ($payment) {
+            $locked = Payment::query()->whereKey($payment->getKey())->lockForUpdate()->first();
+
+            if ($locked->status === 'refunded') {
+                return $locked;
+            }
+
+            $locked->update(['status' => 'refunded']);
+
+            // Reverse the invoice balance now this payment no longer counts.
+            $this->reconciler->applyToInvoice($locked);
+
             LedgerEntry::create([
-                'organization_id' => $payment->organization_id,
-                'payment_id' => $payment->id,
-                'invoice_id' => $payment->invoice_id,
+                'organization_id' => $locked->organization_id,
+                'payment_id' => $locked->id,
+                'invoice_id' => $locked->invoice_id,
                 'type' => 'refund',
                 'category' => 'advance_rent',
-                'amount' => $payment->amount,
-                'entry_date' => Carbon::today()->toDateString(),
-                'description' => "BD-008 Compliant Advance Rent Refund for Tran #: {$payment->transaction_number}",
+                'amount' => $locked->amount,
+                'entry_date' => Carbon::today('Asia/Dhaka')->toDateString(),
+                'description' => "BD-008 advance rent refund — Tran #: {$locked->transaction_number}",
             ]);
 
-            return response()->json([
-                'message' => 'Payment refunded successfully following BD-008 advance rent refund policy.',
-                'data' => $payment,
-            ]);
+            return $locked->fresh();
         });
+
+        return response()->json([
+            'message' => 'Payment refunded under the BD-008 advance rent refund policy.',
+            'data' => $refunded,
+        ]);
     }
 }
