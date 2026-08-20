@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Lease;
 use App\Models\OrganizationMember;
+use App\Services\Invoice\InvoiceNumberGenerator;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -80,7 +81,7 @@ class InvoiceController extends Controller
     /**
      * Batch generate monthly rent invoices for active organization leases.
      */
-    public function generate(Request $request): JsonResponse
+    public function generate(Request $request, InvoiceNumberGenerator $numbers): JsonResponse
     {
         $organizationId = $request->header('X-Organization-Id') ?: $request->input('organization_id');
         $user = $request->user();
@@ -117,9 +118,8 @@ class InvoiceController extends Controller
 
         $generatedCount = 0;
         $monthPadded = str_pad((string) $month, 2, '0', STR_PAD_LEFT);
-        $prefix = "INV-{$year}{$monthPadded}-";
 
-        DB::transaction(function () use ($activeLeases, $member, $month, $year, $monthPadded, $prefix, &$generatedCount) {
+        DB::transaction(function () use ($activeLeases, $member, $month, $year, $monthPadded, $numbers, &$generatedCount) {
             foreach ($activeLeases as $lease) {
                 // Check if invoice already exists for this lease and month
                 $exists = Invoice::where('organization_id', $member->organization_id)
@@ -132,13 +132,8 @@ class InvoiceController extends Controller
                     continue;
                 }
 
-                // Generate sequential invoice number
-                $lastInvoiceNumber = Invoice::where('organization_id', $member->organization_id)
-                    ->where('invoice_number', 'like', "{$prefix}%")
-                    ->count();
-
-                $seq = str_pad((string) ($lastInvoiceNumber + 1), 3, '0', STR_PAD_LEFT);
-                $invoiceNumber = "{$prefix}{$seq}";
+                // Allocated under a row lock; see InvoiceNumberGenerator.
+                $invoiceNumber = $numbers->next($member->organization_id, $year, $month);
 
                 // Compute issue and due dates
                 $issueDate = Carbon::createFromDate($year, $month, 1)->toDateString();
@@ -190,7 +185,7 @@ class InvoiceController extends Controller
     /**
      * Store a newly created custom invoice with line items.
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, InvoiceNumberGenerator $numbers): JsonResponse
     {
         $organizationId = $request->header('X-Organization-Id') ?: $request->input('organization_id');
         $user = $request->user();
@@ -205,9 +200,9 @@ class InvoiceController extends Controller
         }
 
         $request->validate([
-            'tenant_id' => ['required', 'exists:tenants,id'],
-            'unit_id' => ['nullable', 'exists:units,id'],
-            'lease_id' => ['nullable', 'exists:leases,id'],
+            'tenant_id' => ['required', $this->orgExists('tenants')],
+            'unit_id' => ['nullable', $this->orgExists('units')],
+            'lease_id' => ['nullable', $this->orgExists('leases')],
             'billing_period_month' => ['required', 'integer', 'min:1', 'max:12'],
             'billing_period_year' => ['required', 'integer', 'min:2020'],
             'issue_date' => ['required', 'date'],
@@ -219,14 +214,11 @@ class InvoiceController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
-        $monthStr = str_pad((string) $request->billing_period_month, 2, '0', STR_PAD_LEFT);
-        $prefix = "INV-{$request->billing_period_year}{$monthStr}-";
-        $count = Invoice::where('organization_id', $member->organization_id)
-            ->where('invoice_number', 'like', "{$prefix}%")
-            ->count();
-
-        $seq = str_pad((string) ($count + 1), 3, '0', STR_PAD_LEFT);
-        $invoiceNumber = "{$prefix}{$seq}";
+        $invoiceNumber = DB::transaction(fn () => $numbers->next(
+            $member->organization_id,
+            (int) $request->billing_period_year,
+            (int) $request->billing_period_month,
+        ));
 
         return DB::transaction(function () use ($request, $member, $invoiceNumber) {
             $subtotalPoisha = 0;
