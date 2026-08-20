@@ -2,14 +2,10 @@
 
 use App\Http\Controllers\Api\HealthCheckController;
 use App\Http\Controllers\Api\V1\AuditLogController;
-use App\Http\Controllers\Api\V1\BuildingStaffController;
 use App\Http\Controllers\Api\V1\BuildingController;
-use App\Http\Controllers\Api\V1\VendorVisitLogController;
-use App\Http\Controllers\Api\V1\ExternalVendorController;
-use App\Http\Controllers\Api\V1\ScheduledMaintenanceController;
-use App\Http\Controllers\Api\V1\TenantMoveOutNoticeController;
-use App\Http\Controllers\Api\V1\TenantWarningController;
+use App\Http\Controllers\Api\V1\BuildingStaffController;
 use App\Http\Controllers\Api\V1\ExpenseController;
+use App\Http\Controllers\Api\V1\ExternalVendorController;
 use App\Http\Controllers\Api\V1\FinancialReportController;
 use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\LeaseController;
@@ -20,11 +16,15 @@ use App\Http\Controllers\Api\V1\OrganizationMemberController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PropertyController;
 use App\Http\Controllers\Api\V1\RoleController;
+use App\Http\Controllers\Api\V1\ScheduledMaintenanceController;
 use App\Http\Controllers\Api\V1\TenantController;
+use App\Http\Controllers\Api\V1\TenantMoveOutNoticeController;
 use App\Http\Controllers\Api\V1\TenantPortalController;
+use App\Http\Controllers\Api\V1\TenantWarningController;
 use App\Http\Controllers\Api\V1\UnitController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\UtilityProviderController;
+use App\Http\Controllers\Api\V1\VendorVisitLogController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\NewPasswordController;
@@ -36,24 +36,38 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Bariwala Hub — API Routes
+| BashaBari — API Routes
 |--------------------------------------------------------------------------
+|
+| Four access tiers:
+|
+|  1. Public / auth      — no organization context.
+|  2. Account scope      — authenticated but pre-organization (onboarding,
+|                          listing your own memberships).
+|  3. Organization scope — the `organization` middleware resolves and enforces
+|                          the active tenant; `org.permission` enforces RBAC.
+|  4. Tenant portal      — `tenant.portal` derives context from the tenant
+|                          record linked to the user account.
+|
+| Every route in tier 3 runs with a mandatory organization context. Org-scoped
+| models refuse to execute a query without one, so a routing mistake fails
+| closed rather than leaking across tenants.
+|
 */
 
-// Health check endpoint (AWS ELB & K8s Liveness & Readiness Probes)
 Route::get('/health', HealthCheckController::class);
 
-// Authentication Routes (Sanctum SPA Session-Based)
+// ---- Authentication (Sanctum SPA, cookie session) ----
 Route::middleware([StartSession::class])->group(function () {
-    // Auth Routes
-    Route::post('/register', [RegisteredUserController::class, 'store']);
+    Route::post('/register', [RegisteredUserController::class, 'store'])
+        ->middleware('throttle:6,1');
     Route::post('/login', [AuthenticatedSessionController::class, 'store'])
         ->middleware('throttle:login');
     Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])
         ->middleware('throttle:6,1');
-    Route::post('/reset-password', [NewPasswordController::class, 'store']);
+    Route::post('/reset-password', [NewPasswordController::class, 'store'])
+        ->middleware('throttle:6,1');
 
-    // Authenticated Auth Routes
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthenticatedSessionController::class, 'destroy']);
 
@@ -67,142 +81,238 @@ Route::middleware([StartSession::class])->group(function () {
     });
 });
 
-// Version 1 API Routes
 Route::prefix('v1')->group(function () {
     Route::get('/health', HealthCheckController::class);
 
-    // Authenticated API Endpoints
     Route::middleware(['auth:sanctum', StartSession::class])->group(function () {
-        Route::get('/user', [UserController::class, 'show']);
 
-        // Organizations
+        /* ---- Tier 2: account scope (no organization required) ---- */
+
+        Route::get('/user', [UserController::class, 'show']);
+        Route::get('/roles', [RoleController::class, 'index']);
+
+        // Listing and creating organizations necessarily precedes membership.
         Route::get('/organizations', [OrganizationController::class, 'index']);
         Route::post('/organizations', [OrganizationController::class, 'store']);
         Route::get('/organizations/{id}', [OrganizationController::class, 'show']);
-        Route::put('/organizations/{id}', [OrganizationController::class, 'update']);
 
-        // Organization Members
-        Route::get('/organizations/{id}/members', [OrganizationMemberController::class, 'index']);
-        Route::post('/organizations/{id}/members', [OrganizationMemberController::class, 'store']);
-        Route::delete('/organizations/{id}/members/{memberId}', [OrganizationMemberController::class, 'destroy']);
+        /* ---- Tier 4: tenant portal ---- */
 
-        // Roles
-        Route::get('/roles', [RoleController::class, 'index']);
+        Route::middleware('tenant.portal')->prefix('tenant-portal')->group(function () {
+            Route::get('/overview', [TenantPortalController::class, 'overview']);
+            Route::get('/invoices', [TenantPortalController::class, 'invoices']);
+            Route::get('/maintenance', [TenantPortalController::class, 'maintenance']);
+            Route::post('/move-out-notices', [TenantMoveOutNoticeController::class, 'store']);
+        });
 
-        // Properties
-        Route::get('/properties', [PropertyController::class, 'index']);
-        Route::post('/properties', [PropertyController::class, 'store']);
-        Route::get('/properties/{id}', [PropertyController::class, 'show']);
-        Route::put('/properties/{id}', [PropertyController::class, 'update']);
-        Route::delete('/properties/{id}', [PropertyController::class, 'destroy']);
+        /* ---- Tier 3: organization scope ---- */
 
-        // Buildings
-        Route::post('/buildings', [BuildingController::class, 'store']);
-        Route::put('/buildings/{id}', [BuildingController::class, 'update']);
-        Route::delete('/buildings/{id}', [BuildingController::class, 'destroy']);
+        Route::middleware('organization')->group(function () {
 
-        // Units
-        Route::get('/units', [UnitController::class, 'index']);
-        Route::post('/units', [UnitController::class, 'store']);
-        Route::post('/units/{id}/revise-rent', [UnitController::class, 'reviseRent']);
-        Route::put('/units/{id}', [UnitController::class, 'update']);
-        Route::delete('/units/{id}', [UnitController::class, 'destroy']);
+            // Organization settings & team
+            Route::put('/organizations/{id}', [OrganizationController::class, 'update'])
+                ->middleware('org.permission:organization.settings');
 
-        // Tenants
-        Route::get('/tenants', [TenantController::class, 'index']);
-        Route::post('/tenants', [TenantController::class, 'store']);
-        Route::get('/tenants/{id}', [TenantController::class, 'show']);
-        Route::get('/tenants/{id}/dmp-form', [TenantController::class, 'dmpForm']);
-        Route::put('/tenants/{id}', [TenantController::class, 'update']);
-        Route::delete('/tenants/{id}', [TenantController::class, 'destroy']);
+            Route::get('/organizations/{id}/members', [OrganizationMemberController::class, 'index'])
+                ->middleware('org.permission:organization.members.manage');
+            Route::post('/organizations/{id}/members', [OrganizationMemberController::class, 'store'])
+                ->middleware('org.permission:organization.members.manage');
+            Route::delete('/organizations/{id}/members/{memberId}', [OrganizationMemberController::class, 'destroy'])
+                ->middleware('org.permission:organization.members.manage');
 
-        // Leases
-        Route::get('/leases', [LeaseController::class, 'index']);
-        Route::post('/leases', [LeaseController::class, 'store']);
-        Route::get('/leases/{id}', [LeaseController::class, 'show']);
-        Route::put('/leases/{id}', [LeaseController::class, 'update']);
-        Route::post('/leases/{id}/terminate', [LeaseController::class, 'terminate']);
-        Route::delete('/leases/{id}', [LeaseController::class, 'destroy']);
+            // Properties
+            Route::get('/properties', [PropertyController::class, 'index'])
+                ->middleware('org.permission:properties.view');
+            Route::post('/properties', [PropertyController::class, 'store'])
+                ->middleware('org.permission:properties.create');
+            Route::get('/properties/{id}', [PropertyController::class, 'show'])
+                ->middleware('org.permission:properties.view');
+            Route::put('/properties/{id}', [PropertyController::class, 'update'])
+                ->middleware('org.permission:properties.update');
+            Route::delete('/properties/{id}', [PropertyController::class, 'destroy'])
+                ->middleware('org.permission:properties.delete');
 
-        // Invoices
-        Route::get('/invoices', [InvoiceController::class, 'index']);
-        Route::post('/invoices', [InvoiceController::class, 'store']);
-        Route::post('/invoices/generate', [InvoiceController::class, 'generate']);
-        Route::get('/invoices/{id}', [InvoiceController::class, 'show']);
-        Route::delete('/invoices/{id}', [InvoiceController::class, 'destroy']);
+            // Buildings
+            Route::post('/buildings', [BuildingController::class, 'store'])
+                ->middleware('org.permission:properties.create');
+            Route::put('/buildings/{id}', [BuildingController::class, 'update'])
+                ->middleware('org.permission:properties.update');
+            Route::delete('/buildings/{id}', [BuildingController::class, 'destroy'])
+                ->middleware('org.permission:properties.delete');
 
-        // Payments & SSLCommerz Gateway
-        Route::get('/payments', [PaymentController::class, 'index']);
-        Route::post('/payments/initiate-sslcommerz', [PaymentController::class, 'initiateSslcommerz']);
-        Route::post('/payments/sslcommerz/success', [PaymentController::class, 'sslcommerzSuccess']);
-        Route::post('/payments/sslcommerz/ipn', [PaymentController::class, 'sslcommerzSuccess']);
-        Route::post('/payments', [PaymentController::class, 'store']);
-        Route::get('/payments/{id}', [PaymentController::class, 'show']);
-        Route::post('/payments/{id}/refund', [PaymentController::class, 'refund']);
+            // Units
+            Route::get('/units', [UnitController::class, 'index'])
+                ->middleware('org.permission:properties.view');
+            Route::post('/units', [UnitController::class, 'store'])
+                ->middleware('org.permission:properties.create');
+            Route::post('/units/{id}/revise-rent', [UnitController::class, 'reviseRent'])
+                ->middleware(['org.permission:properties.update', 'throttle:sensitive']);
+            Route::put('/units/{id}', [UnitController::class, 'update'])
+                ->middleware('org.permission:properties.update');
+            Route::delete('/units/{id}', [UnitController::class, 'destroy'])
+                ->middleware('org.permission:properties.delete');
 
-        // Maintenance Requests
-        Route::get('/maintenance-requests', [MaintenanceRequestController::class, 'index']);
-        Route::post('/maintenance-requests', [MaintenanceRequestController::class, 'store']);
-        Route::get('/maintenance-requests/{id}', [MaintenanceRequestController::class, 'show']);
-        Route::put('/maintenance-requests/{id}', [MaintenanceRequestController::class, 'update']);
-        Route::delete('/maintenance-requests/{id}', [MaintenanceRequestController::class, 'destroy']);
-        Route::post('/maintenance-requests/{id}/escalate', [MaintenanceRequestController::class, 'escalate']);
+            // Tenants
+            Route::get('/tenants', [TenantController::class, 'index'])
+                ->middleware('org.permission:tenants.view');
+            Route::post('/tenants', [TenantController::class, 'store'])
+                ->middleware('org.permission:tenants.create');
+            Route::get('/tenants/{id}', [TenantController::class, 'show'])
+                ->middleware('org.permission:tenants.view');
+            Route::get('/tenants/{id}/dmp-form', [TenantController::class, 'dmpForm'])
+                ->middleware('org.permission:tenants.view');
+            Route::put('/tenants/{id}', [TenantController::class, 'update'])
+                ->middleware('org.permission:tenants.update');
+            Route::delete('/tenants/{id}', [TenantController::class, 'destroy'])
+                ->middleware('org.permission:tenants.delete');
 
-        // External Service Provider Directory (Future Lead Referral Expansion)
-        Route::get('/external-vendors', [ExternalVendorController::class, 'index']);
-        Route::post('/external-vendors', [ExternalVendorController::class, 'store']);
-        Route::get('/external-vendors/{id}', [ExternalVendorController::class, 'show']);
-        Route::delete('/external-vendors/{id}', [ExternalVendorController::class, 'destroy']);
+            // Leases
+            Route::get('/leases', [LeaseController::class, 'index'])
+                ->middleware('org.permission:tenants.view');
+            Route::post('/leases', [LeaseController::class, 'store'])
+                ->middleware('org.permission:tenants.create');
+            Route::get('/leases/{id}', [LeaseController::class, 'show'])
+                ->middleware('org.permission:tenants.view');
+            Route::put('/leases/{id}', [LeaseController::class, 'update'])
+                ->middleware('org.permission:tenants.update');
+            Route::post('/leases/{id}/terminate', [LeaseController::class, 'terminate'])
+                ->middleware('org.permission:tenants.update');
+            Route::delete('/leases/{id}', [LeaseController::class, 'destroy'])
+                ->middleware('org.permission:tenants.delete');
 
-        // Expenses
-        Route::get('/expenses', [ExpenseController::class, 'index']);
-        Route::post('/expenses', [ExpenseController::class, 'store']);
-        Route::get('/expenses/{id}', [ExpenseController::class, 'show']);
-        Route::delete('/expenses/{id}', [ExpenseController::class, 'destroy']);
+            // Invoices
+            Route::get('/invoices', [InvoiceController::class, 'index'])
+                ->middleware('org.permission:finances.view');
+            Route::post('/invoices', [InvoiceController::class, 'store'])
+                ->middleware('org.permission:finances.invoices.generate');
+            Route::post('/invoices/generate', [InvoiceController::class, 'generate'])
+                ->middleware(['org.permission:finances.invoices.generate', 'throttle:sensitive']);
+            Route::get('/invoices/{id}', [InvoiceController::class, 'show'])
+                ->middleware('org.permission:finances.view');
+            Route::delete('/invoices/{id}', [InvoiceController::class, 'destroy'])
+                ->middleware('org.permission:finances.invoices.generate');
 
-        // Building Staff & Security Guards
-        Route::get('/building-staff', [BuildingStaffController::class, 'index']);
-        Route::post('/building-staff', [BuildingStaffController::class, 'store']);
-        Route::get('/building-staff/{id}', [BuildingStaffController::class, 'show']);
-        Route::put('/building-staff/{id}', [BuildingStaffController::class, 'update']);
-        Route::delete('/building-staff/{id}', [BuildingStaffController::class, 'destroy']);
-        Route::post('/building-staff/{id}/pay-salary', [BuildingStaffController::class, 'paySalary']);
+            // Payments
+            Route::get('/payments', [PaymentController::class, 'index'])
+                ->middleware('org.permission:finances.view');
+            Route::post('/payments', [PaymentController::class, 'store'])
+                ->middleware(['org.permission:finances.payments.record', 'throttle:sensitive']);
+            Route::post('/payments/initiate-sslcommerz', [PaymentController::class, 'initiateSslcommerz'])
+                ->middleware(['org.permission:finances.payments.record', 'throttle:sensitive']);
+            Route::get('/payments/{id}', [PaymentController::class, 'show'])
+                ->middleware('org.permission:finances.view');
+            Route::post('/payments/{id}/refund', [PaymentController::class, 'refund'])
+                ->middleware(['org.permission:finances.payments.record', 'throttle:sensitive']);
 
-        // Vendor & Technician Visit Register
-        Route::get('/vendor-visit-logs', [VendorVisitLogController::class, 'index']);
-        Route::post('/vendor-visit-logs', [VendorVisitLogController::class, 'store']);
-        Route::get('/vendor-visit-logs/{id}', [VendorVisitLogController::class, 'show']);
-        Route::put('/vendor-visit-logs/{id}', [VendorVisitLogController::class, 'update']);
-        Route::delete('/vendor-visit-logs/{id}', [VendorVisitLogController::class, 'destroy']);
+            // Maintenance
+            Route::get('/maintenance-requests', [MaintenanceRequestController::class, 'index'])
+                ->middleware('org.permission:maintenance.view');
+            Route::post('/maintenance-requests', [MaintenanceRequestController::class, 'store'])
+                ->middleware('org.permission:maintenance.manage');
+            Route::get('/maintenance-requests/{id}', [MaintenanceRequestController::class, 'show'])
+                ->middleware('org.permission:maintenance.view');
+            Route::put('/maintenance-requests/{id}', [MaintenanceRequestController::class, 'update'])
+                ->middleware('org.permission:maintenance.manage');
+            Route::delete('/maintenance-requests/{id}', [MaintenanceRequestController::class, 'destroy'])
+                ->middleware('org.permission:maintenance.manage');
+            Route::post('/maintenance-requests/{id}/escalate', [MaintenanceRequestController::class, 'escalate'])
+                ->middleware('org.permission:maintenance.manage');
 
-        // Utility Billing & Sub-Meters
-        Route::get('/utility-providers', [UtilityProviderController::class, 'index']);
-        Route::get('/meter-readings', [MeterReadingController::class, 'index']);
-        Route::post('/meter-readings', [MeterReadingController::class, 'store']);
-        Route::get('/meter-readings/{id}', [MeterReadingController::class, 'show']);
-        Route::delete('/meter-readings/{id}', [MeterReadingController::class, 'destroy']);
+            // External vendor directory
+            Route::get('/external-vendors', [ExternalVendorController::class, 'index'])
+                ->middleware('org.permission:maintenance.view');
+            Route::post('/external-vendors', [ExternalVendorController::class, 'store'])
+                ->middleware('org.permission:maintenance.manage');
+            Route::get('/external-vendors/{id}', [ExternalVendorController::class, 'show'])
+                ->middleware('org.permission:maintenance.view');
+            Route::delete('/external-vendors/{id}', [ExternalVendorController::class, 'destroy'])
+                ->middleware('org.permission:maintenance.manage');
 
-        // Scheduled Maintenance (3-Day Advance Notice Policy)
-        Route::get('/scheduled-maintenances', [ScheduledMaintenanceController::class, 'index']);
-        Route::post('/scheduled-maintenances', [ScheduledMaintenanceController::class, 'store']);
+            // Expenses
+            Route::get('/expenses', [ExpenseController::class, 'index'])
+                ->middleware('org.permission:expenses.view');
+            Route::post('/expenses', [ExpenseController::class, 'store'])
+                ->middleware('org.permission:expenses.create');
+            Route::get('/expenses/{id}', [ExpenseController::class, 'show'])
+                ->middleware('org.permission:expenses.view');
+            Route::delete('/expenses/{id}', [ExpenseController::class, 'destroy'])
+                ->middleware('org.permission:expenses.approve');
 
-        // Tenant Move-Out Notices via Portal
-        Route::get('/move-out-notices', [TenantMoveOutNoticeController::class, 'index']);
-        Route::post('/tenant-portal/move-out-notices', [TenantMoveOutNoticeController::class, 'store']);
+            // Building staff
+            Route::get('/building-staff', [BuildingStaffController::class, 'index'])
+                ->middleware('org.permission:properties.view');
+            Route::post('/building-staff', [BuildingStaffController::class, 'store'])
+                ->middleware('org.permission:properties.update');
+            Route::get('/building-staff/{id}', [BuildingStaffController::class, 'show'])
+                ->middleware('org.permission:properties.view');
+            Route::put('/building-staff/{id}', [BuildingStaffController::class, 'update'])
+                ->middleware('org.permission:properties.update');
+            Route::delete('/building-staff/{id}', [BuildingStaffController::class, 'destroy'])
+                ->middleware('org.permission:properties.delete');
+            Route::post('/building-staff/{id}/pay-salary', [BuildingStaffController::class, 'paySalary'])
+                ->middleware(['org.permission:expenses.create', 'throttle:sensitive']);
 
-        // Property Damage Warnings & Tenant Fines
-        Route::get('/tenant-warnings', [TenantWarningController::class, 'index']);
-        Route::post('/tenant-warnings', [TenantWarningController::class, 'store']);
+            // Vendor & technician visit register
+            Route::get('/vendor-visit-logs', [VendorVisitLogController::class, 'index'])
+                ->middleware('org.permission:maintenance.view');
+            Route::post('/vendor-visit-logs', [VendorVisitLogController::class, 'store'])
+                ->middleware('org.permission:maintenance.manage');
+            Route::get('/vendor-visit-logs/{id}', [VendorVisitLogController::class, 'show'])
+                ->middleware('org.permission:maintenance.view');
+            Route::put('/vendor-visit-logs/{id}', [VendorVisitLogController::class, 'update'])
+                ->middleware('org.permission:maintenance.manage');
+            Route::delete('/vendor-visit-logs/{id}', [VendorVisitLogController::class, 'destroy'])
+                ->middleware('org.permission:maintenance.manage');
 
-        // Tenant Portal Self-Service Endpoints
-        Route::get('/tenant-portal/overview', [TenantPortalController::class, 'overview']);
-        Route::get('/tenant-portal/invoices', [TenantPortalController::class, 'invoices']);
-        Route::get('/tenant-portal/maintenance', [TenantPortalController::class, 'maintenance']);
+            // Utility billing & sub-meters
+            Route::get('/utility-providers', [UtilityProviderController::class, 'index'])
+                ->middleware('org.permission:properties.view');
+            Route::get('/meter-readings', [MeterReadingController::class, 'index'])
+                ->middleware('org.permission:properties.view');
+            Route::post('/meter-readings', [MeterReadingController::class, 'store'])
+                ->middleware('org.permission:properties.update');
+            Route::get('/meter-readings/{id}', [MeterReadingController::class, 'show'])
+                ->middleware('org.permission:properties.view');
+            Route::delete('/meter-readings/{id}', [MeterReadingController::class, 'destroy'])
+                ->middleware('org.permission:properties.delete');
 
-        // Financial Reports
-        Route::get('/reports/cash-flow', [FinancialReportController::class, 'cashFlow']);
+            // Scheduled maintenance (3-day advance notice policy)
+            Route::get('/scheduled-maintenances', [ScheduledMaintenanceController::class, 'index'])
+                ->middleware('org.permission:maintenance.view');
+            Route::post('/scheduled-maintenances', [ScheduledMaintenanceController::class, 'store'])
+                ->middleware('org.permission:maintenance.manage');
 
-        // Security Audit Logs
-        Route::get('/audit-logs', [AuditLogController::class, 'index']);
+            // Move-out notices (landlord-side view)
+            Route::get('/move-out-notices', [TenantMoveOutNoticeController::class, 'index'])
+                ->middleware('org.permission:tenants.view');
+
+            // Property damage warnings & tenant fines
+            Route::get('/tenant-warnings', [TenantWarningController::class, 'index'])
+                ->middleware('org.permission:tenants.view');
+            Route::post('/tenant-warnings', [TenantWarningController::class, 'store'])
+                ->middleware('org.permission:tenants.update');
+
+            // Financial reports
+            Route::get('/reports/cash-flow', [FinancialReportController::class, 'cashFlow'])
+                ->middleware('org.permission:finances.reports.view');
+
+            // Security audit logs
+            Route::get('/audit-logs', [AuditLogController::class, 'index'])
+                ->middleware('org.permission:organization.settings');
+        });
     });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Payment gateway callbacks
+|--------------------------------------------------------------------------
+|
+| SSLCommerz posts server-to-server and cannot present a session cookie, so
+| this route sits outside auth. It is protected by gateway-side validation in
+| the controller — never by trusting the posted body.
+|
+*/
+Route::prefix('v1/gateway/sslcommerz')->middleware('throttle:60,1')->group(function () {
+    Route::post('/ipn', [PaymentController::class, 'sslcommerzIpn'])->name('sslcommerz.ipn');
 });

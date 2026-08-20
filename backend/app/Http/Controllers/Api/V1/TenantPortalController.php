@@ -10,34 +10,39 @@ use App\Models\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * Self-service endpoints for tenants.
+ *
+ * The tenant is resolved once, by SetTenantPortalOrganization, from
+ * tenants.user_id — never by matching an unverified email or phone number
+ * across organizations. Organization context is set by the same middleware, so
+ * every org-scoped query below is additionally constrained to the tenant's own
+ * organization.
+ */
 class TenantPortalController extends Controller
 {
+    private function tenant(Request $request): Tenant
+    {
+        return $request->attributes->get('current_tenant');
+    }
+
     /**
-     * Fetch active tenant profile and overview statistics.
+     * Fetch the tenant profile and overview statistics.
      */
     public function overview(Request $request): JsonResponse
     {
-        $user = $request->user();
-
-        $tenant = Tenant::where('email', $user->email)
-            ->orWhere('phone', $user->phone)
-            ->with(['organization'])
-            ->first();
-
-        if (! $tenant) {
-            return response()->json([
-                'message' => 'No active tenant profile linked to your user account.',
-            ], 404);
-        }
+        $tenant = $this->tenant($request);
+        $tenant->load('organization');
 
         $activeLease = Lease::where('tenant_id', $tenant->id)
             ->where('status', 'active')
             ->with(['unit.property', 'unit.building', 'unit.floor'])
             ->first();
 
-        $unpaidInvoices = Invoice::where('tenant_id', $tenant->id)
+        $outstanding = Invoice::where('tenant_id', $tenant->id)
             ->whereIn('status', ['unpaid', 'partially_paid'])
-            ->get();
+            ->selectRaw('COUNT(*) as invoice_count, COALESCE(SUM(due_amount), 0) as total_due')
+            ->first();
 
         $maintenanceCount = MaintenanceRequest::where('tenant_id', $tenant->id)
             ->whereIn('status', ['pending', 'in_progress'])
@@ -46,47 +51,35 @@ class TenantPortalController extends Controller
         return response()->json([
             'tenant' => $tenant,
             'active_lease' => $activeLease,
-            'unpaid_invoices_count' => $unpaidInvoices->count(),
-            'total_due_poisha' => (int) $unpaidInvoices->sum('due_amount'),
+            'unpaid_invoices_count' => (int) $outstanding->invoice_count,
+            'total_due_poisha' => (int) $outstanding->total_due,
             'open_maintenance_tickets_count' => $maintenanceCount,
         ]);
     }
 
     /**
-     * Display tenant's rent invoice history.
+     * Display the tenant's rent invoice history.
      */
     public function invoices(Request $request): JsonResponse
     {
-        $user = $request->user();
-
-        $tenant = Tenant::where('email', $user->email)
-            ->orWhere('phone', $user->phone)
-            ->firstOrFail();
-
-        $invoices = Invoice::where('tenant_id', $tenant->id)
+        $invoices = Invoice::where('tenant_id', $this->tenant($request)->id)
             ->with(['items', 'lease.unit.property'])
-            ->latest('billing_month')
-            ->get();
+            ->latest('issue_date')
+            ->paginate($request->integer('per_page', 25));
 
-        return response()->json(['data' => $invoices]);
+        return response()->json($invoices);
     }
 
     /**
-     * Display tenant's maintenance request tickets.
+     * Display the tenant's maintenance request tickets.
      */
     public function maintenance(Request $request): JsonResponse
     {
-        $user = $request->user();
-
-        $tenant = Tenant::where('email', $user->email)
-            ->orWhere('phone', $user->phone)
-            ->firstOrFail();
-
-        $tickets = MaintenanceRequest::where('tenant_id', $tenant->id)
+        $tickets = MaintenanceRequest::where('tenant_id', $this->tenant($request)->id)
             ->with(['property', 'unit'])
             ->latest()
-            ->get();
+            ->paginate($request->integer('per_page', 25));
 
-        return response()->json(['data' => $tickets]);
+        return response()->json($tickets);
     }
 }
