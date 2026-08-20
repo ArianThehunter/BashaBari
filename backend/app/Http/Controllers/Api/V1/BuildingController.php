@@ -19,7 +19,7 @@ class BuildingController extends Controller
         $user = $request->user();
 
         $request->validate([
-            'property_id' => ['required', 'exists:properties,id'],
+            'property_id' => ['required', $this->orgExists('properties')],
             'name' => ['required', 'string', 'max:255'],
             'total_floors' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);

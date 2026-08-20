@@ -48,8 +48,8 @@ class BuildingStaffController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'property_id' => 'required|exists:properties,id',
-            'building_id' => 'nullable|exists:buildings,id',
+            'property_id' => ['required', $this->orgExists('properties')],
+            'building_id' => ['nullable', $this->orgExists('buildings')],
             'user_id' => 'nullable|exists:users,id',
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
@@ -142,9 +142,9 @@ class BuildingStaffController extends Controller
 
         $previousRole = $staff->staff_role;
 
-        $isCaretaker = isset($validated['is_caretaker']) ? (bool)$validated['is_caretaker'] : $staff->is_caretaker;
-        $isGuard = isset($validated['is_security_guard']) ? (bool)$validated['is_security_guard'] : $staff->is_security_guard;
-        $isOwner = isset($validated['is_owner_manager']) ? (bool)$validated['is_owner_manager'] : $staff->is_owner_manager;
+        $isCaretaker = isset($validated['is_caretaker']) ? (bool) $validated['is_caretaker'] : $staff->is_caretaker;
+        $isGuard = isset($validated['is_security_guard']) ? (bool) $validated['is_security_guard'] : $staff->is_security_guard;
+        $isOwner = isset($validated['is_owner_manager']) ? (bool) $validated['is_owner_manager'] : $staff->is_owner_manager;
 
         if ($isOwner) {
             $newRole = 'bariwala_manager';
@@ -202,7 +202,7 @@ class BuildingStaffController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $voucherNumber = 'EXP-' . date('Ym') . '-' . str_pad(rand(100, 999), 3, '0', STR_PAD_LEFT);
+        $voucherNumber = 'EXP-'.date('Ym').'-'.str_pad(rand(100, 999), 3, '0', STR_PAD_LEFT);
 
         // Record expense
         $expense = Expense::create([

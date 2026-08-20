@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Tenant;
 use App\Models\TenantMoveOutNotice;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,16 +34,16 @@ class TenantMoveOutNoticeController extends Controller
     public function store(Request $request): JsonResponse
     {
         $user = $request->user();
-        
-        $tenant = \App\Models\Tenant::where('user_id', $user?->id)->first();
-        if (!$tenant) {
-            $tenant = \App\Models\Tenant::first(); // Fallback for dev tenant
+
+        $tenant = Tenant::where('user_id', $user?->id)->first();
+        if (! $tenant) {
+            $tenant = Tenant::first(); // Fallback for dev tenant
         }
 
         $validated = $request->validate([
-            'property_id' => 'nullable|exists:properties,id',
-            'building_id' => 'nullable|exists:buildings,id',
-            'unit_id' => 'nullable|exists:units,id',
+            'property_id' => ['nullable', $this->orgExists('properties')],
+            'building_id' => ['nullable', $this->orgExists('buildings')],
+            'unit_id' => ['nullable', $this->orgExists('units')],
             'intended_move_out_date' => 'required|date|after:today',
             'reason_for_leaving' => 'nullable|string',
             'deposit_refund_account' => 'nullable|string|max:255',

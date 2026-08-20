@@ -80,9 +80,9 @@ class ExpenseController extends Controller
         }
 
         $request->validate([
-            'property_id' => ['nullable', 'exists:properties,id'],
-            'unit_id' => ['nullable', 'exists:units,id'],
-            'maintenance_request_id' => ['nullable', 'exists:maintenance_requests,id'],
+            'property_id' => ['nullable', $this->orgExists('properties')],
+            'unit_id' => ['nullable', $this->orgExists('units')],
+            'maintenance_request_id' => ['nullable', $this->orgExists('maintenance_requests')],
             'category' => ['required', 'string', 'in:plumbing,electrical,painting,elevator,cleaning,repairs,utility_bill,tax,other'],
             'amount_bdt' => ['required', 'numeric', 'min:1'],
             'expense_date' => ['required', 'date'],

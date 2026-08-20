@@ -79,10 +79,10 @@ class MaintenanceRequestController extends Controller
         }
 
         $request->validate([
-            'property_id' => ['required', 'exists:properties,id'],
-            'building_id' => ['nullable', 'exists:buildings,id'],
-            'unit_id' => ['nullable', 'exists:units,id'],
-            'tenant_id' => ['nullable', 'exists:tenants,id'],
+            'property_id' => ['required', $this->orgExists('properties')],
+            'building_id' => ['nullable', $this->orgExists('buildings')],
+            'unit_id' => ['nullable', $this->orgExists('units')],
+            'tenant_id' => ['nullable', $this->orgExists('tenants')],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'category' => ['required', 'string', 'in:plumbing,electrical,painting,elevator,cleaning,repairs,other'],

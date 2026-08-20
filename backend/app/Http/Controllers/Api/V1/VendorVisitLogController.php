@@ -43,9 +43,9 @@ class VendorVisitLogController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'property_id' => 'required|exists:properties,id',
-            'building_id' => 'nullable|exists:buildings,id',
-            'recorded_by_staff_id' => 'nullable|exists:building_staff,id',
+            'property_id' => ['required', $this->orgExists('properties')],
+            'building_id' => ['nullable', $this->orgExists('buildings')],
+            'recorded_by_staff_id' => ['nullable', $this->orgExists('building_staff')],
             'technician_name' => 'required|string|max:255',
             'technician_phone' => 'required|string|max:20',
             'company_name' => 'nullable|string|max:255',
@@ -67,8 +67,8 @@ class VendorVisitLogController extends Controller
         ]));
 
         // If spot cash payment was made to vendor, automatically record expense entry
-        if (!empty($validated['amount_paid']) && $validated['amount_paid'] > 0) {
-            $voucherNumber = 'EXP-' . date('Ym') . '-' . str_pad(rand(100, 999), 3, '0', STR_PAD_LEFT);
+        if (! empty($validated['amount_paid']) && $validated['amount_paid'] > 0) {
+            $voucherNumber = 'EXP-'.date('Ym').'-'.str_pad(rand(100, 999), 3, '0', STR_PAD_LEFT);
             Expense::create([
                 'organization_id' => $property->organization_id,
                 'property_id' => $validated['property_id'],

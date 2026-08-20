@@ -73,9 +73,9 @@ class MeterReadingController extends Controller
         }
 
         $request->validate([
-            'property_id' => ['required', 'exists:properties,id'],
-            'building_id' => ['nullable', 'exists:buildings,id'],
-            'unit_id' => ['nullable', 'exists:units,id'],
+            'property_id' => ['required', $this->orgExists('properties')],
+            'building_id' => ['nullable', $this->orgExists('buildings')],
+            'unit_id' => ['nullable', $this->orgExists('units')],
             'utility_provider_id' => ['required', 'exists:utility_providers,id'],
             'meter_number' => ['required', 'string', 'max:100'],
             'previous_reading' => ['required', 'numeric', 'min:0'],
