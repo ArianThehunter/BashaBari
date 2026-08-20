@@ -1,15 +1,119 @@
+# ---------------------------------------------------------------------------
+# BashaBari — Render blueprint
+#
+# The previous blueprint declared only the web service, so:
+#   - the queue was configured but nothing consumed it, and
+#   - `Schedule::command('invoices:generate-monthly')` never fired, because
+#     nothing ran the scheduler. Automated invoicing silently did not happen.
+#
+# Both now have their own service.
+# ---------------------------------------------------------------------------
+
+databases:
+  - name: bashabari-postgres
+    databaseName: bashabari
+    user: bashabari
+    plan: basic-256mb
+    postgresMajorVersion: "16"
+
 services:
-  # ---- Laravel 11 Backend Web Service ----
+  # ---- Redis (cache, sessions, queue) ----
+  - type: keyvalue
+    name: bashabari-redis
+    plan: starter
+    maxmemoryPolicy: noeviction # queue jobs must never be evicted
+    ipAllowList: []
+
+  # ---- API ----
   - type: web
     name: bashabari-backend
-    env: docker
+    runtime: docker
     rootDir: backend
-    dockerfilePath: Dockerfile
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    healthCheckPath: /api/health
     preDeployCommand: php artisan migrate --force
-    envVars:
+    envVars: &backendEnv
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
-        value: false
+        value: "false"
+      - key: APP_KEY
+        sync: false # set once in the dashboard: php artisan key:generate --show
+      - key: APP_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
       - key: LOG_CHANNEL
         value: stderr
+      - key: LOG_LEVEL
+        value: warning
+
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DATABASE_URL
+        fromDatabase:
+          name: bashabari-postgres
+          property: connectionString
+
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: bashabari-redis
+          property: connectionString
+      - key: CACHE_STORE
+        value: redis
+      - key: SESSION_DRIVER
+        value: redis
+      - key: QUEUE_CONNECTION
+        value: redis
+
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: SESSION_DOMAIN
+        sync: false
+      - key: SANCTUM_STATEFUL_DOMAINS
+        sync: false
+
+      - key: SSLCOMMERZ_DRIVER
+        value: live
+      - key: SSLCOMMERZ_STORE_ID
+        sync: false
+      - key: SSLCOMMERZ_STORE_PASSWORD
+        sync: false
+      - key: SSLCOMMERZ_BASE_URL
+        value: https://securepay.sslcommerz.com
+
+      - key: MAIL_MAILER
+        value: ses
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_DEFAULT_REGION
+        value: ap-southeast-1
+
+  # ---- Queue worker ----
+  # Without this, anything dispatched to the queue is written to Redis and
+  # never executed.
+  - type: worker
+    name: bashabari-worker
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    dockerCommand: php artisan queue:work --tries=3 --backoff=10 --max-time=3600 --sleep=3
+    envVars: *backendEnv
+
+  # ---- Scheduler ----
+  # Render cron jobs replace crontab; this ticks Laravel's scheduler once a
+  # minute so `Schedule::command(...)` entries in routes/console.php run.
+  - type: cron
+    name: bashabari-scheduler
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    schedule: "* * * * *"
+    dockerCommand: php artisan schedule:run
+    envVars: *backendEnv

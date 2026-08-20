@@ -1,0 +1,26 @@
+# Never bake secrets or local state into the image.
+.env
+.env.*
+!.env.example
+
+# Rebuilt inside the image by the composer stage.
+vendor/
+node_modules/
+
+# Local artefacts
+storage/logs/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+database/*.sqlite
+.phpunit.result.cache
+.phpunit.cache/
+bootstrap/cache/*.php
+
+# VCS, CI, editor, docs
+.git/
+.github/
+.idea/
+.vscode/
+tests/
+*.md
