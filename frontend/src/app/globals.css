@@ -50,7 +50,8 @@
   --color-sidebar-primary: hsl(var(--sidebar-primary));
   --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
 
-  --font-sans: var(--font-inter);
+  /* Latin glyphs resolve from Inter; Bengali glyphs fall through to Noto. */
+  --font-sans: var(--font-inter), var(--font-bengali), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
 
   --radius-sm: 0.375rem;
