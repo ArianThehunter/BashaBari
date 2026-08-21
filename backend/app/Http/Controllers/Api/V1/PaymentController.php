@@ -10,6 +10,7 @@ use App\Models\LedgerEntry;
 use App\Models\Payment;
 use App\Services\Payment\PaymentGatewayInterface;
 use App\Services\Payment\PaymentReconciler;
+use App\Support\BusinessTime;
 use App\Support\OrganizationContext;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -91,7 +92,7 @@ class PaymentController extends Controller
             'amount' => $invoice->due_amount,
             'store_amount' => $invoice->due_amount,
             'currency' => 'BDT',
-            'payment_date' => Carbon::today('Asia/Dhaka')->toDateString(),
+            'payment_date' => BusinessTime::todayString(),
             'status' => 'pending',
             'notes' => "Checkout session opened for invoice #{$invoice->invoice_number}",
         ]);
@@ -281,7 +282,7 @@ class PaymentController extends Controller
                 'type' => 'refund',
                 'category' => 'advance_rent',
                 'amount' => $locked->amount,
-                'entry_date' => Carbon::today('Asia/Dhaka')->toDateString(),
+                'entry_date' => BusinessTime::todayString(),
                 'description' => "BD-008 advance rent refund — Tran #: {$locked->transaction_number}",
             ]);
 
