@@ -3,13 +3,16 @@ import { NextResponse, type NextRequest } from "next/server";
 /**
  * Edge gate for authenticated areas.
  *
+ * Next.js 16 renamed Middleware to Proxy; the convention is a single `proxy.ts`
+ * beside `app/`, exporting a function named `proxy`.
+ *
  * Route protection was previously a `useEffect` redirect inside the dashboard
  * layout, so the full dashboard shell was served to anonymous visitors and only
  * bounced after hydration. This stops the request before any of it is sent.
  *
- * This is a UX and exposure control, not the security boundary — the Laravel
- * API remains the authority on every request. It only checks that a session
- * cookie is present, never that it is valid.
+ * This is the "optimistic check" pattern the Next docs describe: it only looks
+ * for the presence of a session cookie, never whether it is valid. The Laravel
+ * API remains the authority on every request.
  */
 
 const SESSION_COOKIES = ["laravel_session", "bashabari_session"];
@@ -38,7 +41,7 @@ function hasSessionCookie(request: NextRequest): boolean {
   return SESSION_COOKIES.some((name) => Boolean(request.cookies.get(name)?.value));
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const authenticated = hasSessionCookie(request);
 
