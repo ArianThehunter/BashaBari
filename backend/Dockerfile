@@ -1,53 +1,99 @@
-# ---- Production Dockerfile for Laravel 11 Backend ----
-FROM php:8.4-cli-alpine
+# syntax=docker/dockerfile:1
 
-# Install system dependencies & PostgreSQL C client libraries
-RUN apk add --no-cache \
-    git \
-    curl \
-    libpng-dev \
-    oniguruma-dev \
-    libxml2-dev \
-    zip \
-    unzip \
-    sqlite-dev \
-    postgresql-dev \
-    postgresql-client \
-    libzip-dev \
-    && docker-php-ext-configure pgsql -with-pgsql=/usr/local/pgsql \
-    && docker-php-ext-install pgsql pdo pdo_pgsql pdo_sqlite pdo_mysql mbstring zip bcmath opcache
+# ---------------------------------------------------------------------------
+# BashaBari API — production image
+#
+# Serves through nginx + PHP-FPM under supervisord. The previous image ran
+# `php artisan serve`, which is the single-threaded built-in development server
+# and handles one request at a time.
+# ---------------------------------------------------------------------------
 
-# Configure production OPcache & memory settings
-RUN { \
-    echo 'opcache.enable=1'; \
-    echo 'opcache.enable_cli=1'; \
-    echo 'opcache.memory_consumption=128'; \
-    echo 'opcache.interned_strings_buffer=16'; \
-    echo 'opcache.max_accelerated_files=10000'; \
-    echo 'opcache.validate_timestamps=0'; \
-    echo 'opcache.revalidate_freq=0'; \
-    echo 'memory_limit=256M'; \
-    echo 'upload_max_filesize=20M'; \
-    echo 'post_max_size=25M'; \
-} > /usr/local/etc/php/conf.d/docker-php-ext-production.ini
+# ---- Stage 1: composer dependencies -------------------------------------
+FROM composer:2 AS vendor
 
-# Install Composer globally
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-# Set working directory
 WORKDIR /app
 
-# Copy application source
+# Install against the lockfile alone first so the layer caches across code changes.
+COPY composer.json composer.lock ./
+
+RUN composer install \
+        --no-dev \
+        --no-scripts \
+        --no-autoloader \
+        --prefer-dist \
+        --no-interaction \
+        --no-progress
+
 COPY . .
 
-# Install PHP dependencies with platform fallback & optimize autoloader
-RUN composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs
+RUN composer dump-autoload --no-dev --optimize --classmap-authoritative
 
-# Create SQLite database fallback if needed & set permissions
-RUN touch /app/database/database.sqlite && chmod -R 777 /app/storage /app/bootstrap/cache /app/database
 
-# Expose port
-EXPOSE 8000
+# ---- Stage 2: runtime ----------------------------------------------------
+FROM php:8.4-fpm-alpine AS runtime
 
-# Start command
-CMD php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
+RUN apk add --no-cache \
+        nginx \
+        supervisor \
+        postgresql-client \
+        libpq \
+        icu-libs \
+        oniguruma \
+        libzip \
+    && apk add --no-cache --virtual .build-deps \
+        $PHPIZE_DEPS \
+        postgresql-dev \
+        icu-dev \
+        oniguruma-dev \
+        libzip-dev \
+    && docker-php-ext-install -j"$(nproc)" \
+        pdo_pgsql \
+        pgsql \
+        bcmath \
+        intl \
+        opcache \
+        zip \
+    && apk del .build-deps
+
+# Production PHP settings. validate_timestamps=0 is safe because the code is
+# baked into the image and never changes at runtime.
+RUN { \
+        echo 'opcache.enable=1'; \
+        echo 'opcache.enable_cli=0'; \
+        echo 'opcache.memory_consumption=192'; \
+        echo 'opcache.interned_strings_buffer=16'; \
+        echo 'opcache.max_accelerated_files=20000'; \
+        echo 'opcache.validate_timestamps=0'; \
+        echo 'memory_limit=256M'; \
+        echo 'upload_max_filesize=20M'; \
+        echo 'post_max_size=25M'; \
+        echo 'expose_php=Off'; \
+        echo 'display_errors=Off'; \
+        echo 'log_errors=On'; \
+        echo 'error_log=/dev/stderr'; \
+    } > /usr/local/etc/php/conf.d/zz-production.ini
+
+WORKDIR /var/www/html
+
+COPY --from=vendor --chown=www-data:www-data /app /var/www/html
+
+COPY docker/nginx/site.conf /etc/nginx/http.d/default.conf
+COPY docker/supervisord.conf /etc/supervisord.conf
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint
+RUN chmod +x /usr/local/bin/entrypoint
+
+# Only these two trees need to be writable — not the whole application, and
+# never world-writable.
+RUN mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache \
+    && mkdir -p /var/lib/nginx/tmp /var/log/nginx /run/nginx \
+    && chown -R www-data:www-data /var/lib/nginx /var/log/nginx /run/nginx
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD php -r "exit(@file_get_contents('http://127.0.0.1:8080/api/health') ? 0 : 1);"
+
+ENTRYPOINT ["entrypoint"]
+CMD ["supervisord", "-c", "/etc/supervisord.conf"]

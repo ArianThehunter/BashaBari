@@ -83,20 +83,27 @@ export const paymentService = {
   },
 
   /**
-   * Complete SSLCommerz simulated payment success callback.
+   * Post the gateway callback.
+   *
+   * `amount` and `signature` come from the checkout URL the backend generated
+   * and must be forwarded untouched — the server recomputes the signature and
+   * rejects the callback if it does not match, so a client cannot mark an
+   * invoice paid on its own say-so.
    */
   async completeSslcommerzSuccess(data: {
     tran_id: string;
+    amount: string;
+    signature: string;
     val_id?: string;
     card_type?: string;
     bank_tran_id?: string;
     card_no?: string;
-  }): Promise<Payment> {
-    const response = await api.post<{ data: Payment }>(
-      "/api/v1/payments/sslcommerz/success",
+  }): Promise<{ message: string }> {
+    const response = await api.post<{ message: string }>(
+      "/api/v1/gateway/sslcommerz/ipn",
       data,
     );
-    return response.data.data;
+    return response.data;
   },
 
   /**

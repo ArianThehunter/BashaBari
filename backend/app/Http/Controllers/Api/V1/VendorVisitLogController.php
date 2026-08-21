@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\Expense;
+use App\Models\Property;
 use App\Models\VendorVisitLog;
+use App\Services\Expense\ExpenseRecorder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -40,12 +41,12 @@ class VendorVisitLogController extends Controller
     /**
      * Store a new technician visit log entry.
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, ExpenseRecorder $recorder): JsonResponse
     {
         $validated = $request->validate([
-            'property_id' => 'required|exists:properties,id',
-            'building_id' => 'nullable|exists:buildings,id',
-            'recorded_by_staff_id' => 'nullable|exists:building_staff,id',
+            'property_id' => ['required', $this->orgExists('properties')],
+            'building_id' => ['nullable', $this->orgExists('buildings')],
+            'recorded_by_staff_id' => ['nullable', $this->orgExists('building_staff')],
             'technician_name' => 'required|string|max:255',
             'technician_phone' => 'required|string|max:20',
             'company_name' => 'nullable|string|max:255',
@@ -58,31 +59,32 @@ class VendorVisitLogController extends Controller
             'receipt_reference' => 'nullable|string|max:100',
         ]);
 
-        $property = DB::table('properties')->where('id', $validated['property_id'])->first();
+        $property = Property::findOrFail($validated['property_id']);
 
-        $log = VendorVisitLog::create(array_merge($validated, [
-            'organization_id' => $property->organization_id,
-            'recorded_by_user_id' => $request->user()?->id,
-            'status' => isset($validated['exit_time']) ? 'completed' : 'in_progress',
-        ]));
-
-        // If spot cash payment was made to vendor, automatically record expense entry
-        if (!empty($validated['amount_paid']) && $validated['amount_paid'] > 0) {
-            $voucherNumber = 'EXP-' . date('Ym') . '-' . str_pad(rand(100, 999), 3, '0', STR_PAD_LEFT);
-            Expense::create([
+        // The log and any spot-cash expense are one unit of work.
+        $log = DB::transaction(function () use ($validated, $property, $request, $recorder) {
+            $log = VendorVisitLog::create(array_merge($validated, [
                 'organization_id' => $property->organization_id,
-                'property_id' => $validated['property_id'],
-                'building_id' => $validated['building_id'] ?? null,
-                'expense_number' => $voucherNumber,
-                'category' => $validated['service_category'] === 'elevator' ? 'elevator' : ($validated['service_category'] === 'plumbing' ? 'plumbing' : 'repairs'),
-                'amount' => $validated['amount_paid'],
-                'expense_date' => now()->toDateString(),
-                'vendor_name' => $validated['company_name'] ?: $validated['technician_name'],
-                'payment_method' => $validated['payment_method'] ?? 'cash',
-                'receipt_reference' => $validated['receipt_reference'] ?: $voucherNumber,
-                'notes' => "Service visit: {$validated['purpose_of_visit']} by {$validated['technician_name']}",
-            ]);
-        }
+                'recorded_by_user_id' => $request->user()?->id,
+                'status' => isset($validated['exit_time']) ? 'completed' : 'in_progress',
+            ]));
+
+            if (! empty($validated['amount_paid']) && $validated['amount_paid'] > 0) {
+                $recorder->record([
+                    'organization_id' => $property->organization_id,
+                    'property_id' => $validated['property_id'],
+                    'building_id' => $validated['building_id'] ?? null,
+                    'category' => $this->expenseCategoryFor($validated['service_category']),
+                    'amount' => (int) $validated['amount_paid'],
+                    'vendor_name' => ($validated['company_name'] ?? null) ?: $validated['technician_name'],
+                    'payment_method' => $validated['payment_method'] ?? 'cash',
+                    'receipt_reference' => $validated['receipt_reference'] ?? null,
+                    'notes' => "Service visit: {$validated['purpose_of_visit']} by {$validated['technician_name']}",
+                ]);
+            }
+
+            return $log;
+        });
 
         return response()->json([
             'message' => 'Technician visit log recorded successfully.',
@@ -136,5 +138,17 @@ class VendorVisitLogController extends Controller
         return response()->json([
             'message' => 'Visit log entry removed.',
         ]);
+    }
+
+    /**
+     * Map a visit's service category onto an expense category.
+     *
+     * Anything without a direct equivalent books as repairs.
+     */
+    private function expenseCategoryFor(string $serviceCategory): string
+    {
+        return in_array($serviceCategory, ExpenseRecorder::CATEGORIES, true)
+            ? $serviceCategory
+            : 'repairs';
     }
 }

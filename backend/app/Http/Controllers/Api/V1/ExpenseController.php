@@ -4,13 +4,11 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Expense;
-use App\Models\LedgerEntry;
 use App\Models\OrganizationMember;
-use Carbon\Carbon;
+use App\Services\Expense\ExpenseRecorder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class ExpenseController extends Controller
 {
@@ -65,7 +63,7 @@ class ExpenseController extends Controller
     /**
      * Store a newly logged property operating expense.
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, ExpenseRecorder $recorder): JsonResponse
     {
         $organizationId = $request->header('X-Organization-Id') ?: $request->input('organization_id');
         $user = $request->user();
@@ -80,10 +78,10 @@ class ExpenseController extends Controller
         }
 
         $request->validate([
-            'property_id' => ['nullable', 'exists:properties,id'],
-            'unit_id' => ['nullable', 'exists:units,id'],
-            'maintenance_request_id' => ['nullable', 'exists:maintenance_requests,id'],
-            'category' => ['required', 'string', 'in:plumbing,electrical,painting,elevator,cleaning,repairs,utility_bill,tax,other'],
+            'property_id' => ['nullable', $this->orgExists('properties')],
+            'unit_id' => ['nullable', $this->orgExists('units')],
+            'maintenance_request_id' => ['nullable', $this->orgExists('maintenance_requests')],
+            'category' => ['required', 'string', Rule::in(ExpenseRecorder::CATEGORIES)],
             'amount_bdt' => ['required', 'numeric', 'min:1'],
             'expense_date' => ['required', 'date'],
             'vendor_name' => ['nullable', 'string', 'max:255'],
@@ -93,46 +91,27 @@ class ExpenseController extends Controller
         ]);
 
         $amountPoisha = (int) round($request->amount_bdt * 100);
-        $monthStr = Carbon::parse($request->expense_date)->format('Ym');
-        $prefix = "EXP-{$monthStr}-";
-        $count = Expense::where('organization_id', $member->organization_id)
-            ->where('expense_number', 'like', "{$prefix}%")
-            ->count();
 
-        $seq = Str::padLeft((string) ($count + 1), 3, '0');
-        $expenseNumber = "{$prefix}{$seq}";
+        // ExpenseRecorder allocates the voucher number under a lock and writes
+        // the matching ledger entry in the same transaction.
+        $expense = $recorder->record([
+            'organization_id' => $member->organization_id,
+            'property_id' => $request->property_id,
+            'unit_id' => $request->unit_id,
+            'maintenance_request_id' => $request->maintenance_request_id,
+            'category' => $request->category,
+            'amount' => $amountPoisha,
+            'expense_date' => $request->expense_date,
+            'vendor_name' => $request->vendor_name,
+            'payment_method' => $request->payment_method,
+            'receipt_reference' => $request->receipt_reference,
+            'notes' => $request->notes,
+        ]);
 
-        return DB::transaction(function () use ($request, $member, $amountPoisha, $expenseNumber) {
-            $expense = Expense::create([
-                'organization_id' => $member->organization_id,
-                'property_id' => $request->property_id,
-                'unit_id' => $request->unit_id,
-                'maintenance_request_id' => $request->maintenance_request_id,
-                'expense_number' => $expenseNumber,
-                'category' => $request->category,
-                'amount' => $amountPoisha,
-                'expense_date' => $request->expense_date,
-                'vendor_name' => $request->vendor_name,
-                'payment_method' => $request->payment_method,
-                'receipt_reference' => $request->receipt_reference,
-                'notes' => $request->notes,
-            ]);
-
-            // Double-entry general ledger entry
-            LedgerEntry::create([
-                'organization_id' => $member->organization_id,
-                'type' => 'expense',
-                'category' => $request->category,
-                'amount' => $amountPoisha,
-                'entry_date' => $request->expense_date,
-                'description' => "Property Expense ({$request->category}) - Vendor: ".($request->vendor_name ?: 'N/A')." [{$expenseNumber}]",
-            ]);
-
-            return response()->json([
-                'message' => 'Property expense logged successfully.',
-                'data' => $expense->load(['property', 'unit', 'maintenanceRequest']),
-            ], 201);
-        });
+        return response()->json([
+            'message' => 'Property expense logged successfully.',
+            'data' => $expense->load(['property', 'unit', 'maintenanceRequest']),
+        ], 201);
     }
 
     /**

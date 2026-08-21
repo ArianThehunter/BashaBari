@@ -2,15 +2,34 @@
 
 ## Overview
 
-Authorization is enforced at **5 layers**, from outermost to innermost:
+Authorization is enforced at **4 layers**, from outermost to innermost:
 
-1. **Authentication middleware** — Is the user logged in?
-2. **Organization resolution middleware** — Which organization context is active?
-3. **Global Eloquent scope** — Auto-filter all queries by `organization_id`.
-4. **Laravel Policies** — Can this user perform this action on this resource?
-5. **Property-level check** — Is the user assigned to this specific property?
+1. **Authentication middleware** (`auth:sanctum`) — Is the user logged in?
+2. **Organization resolution** (`organization`) — Which organization is active?
+   Resolves from the `X-Organization-Id` header, falling back to the caller's
+   single active membership. **Fails closed**: if no organization resolves, or
+   the caller is not an active member of the one requested, the request is
+   rejected with `403` before reaching a controller.
+3. **Permission middleware** (`org.permission:<name>`) — Does the caller's role
+   grant this action? Declared per route in `routes/api.php`, resolved against
+   the roles and permissions seeded by `RoleAndPermissionSeeder`. Owners hold
+   every permission implicitly; a member with no role holds none.
+4. **Global Eloquent scope** (`BelongsToOrganization`) — Every query on an
+   org-scoped model is filtered by `organization_id`. Inside a tenant-scoped
+   request, a missing organization context **throws** rather than running the
+   query unscoped.
 
-The frontend hides UI elements for unauthorized actions (for UX), but this is **never** the security boundary. All authorization is enforced server-side.
+Because layer 4 guarantees a record belongs to the active organization,
+record-level ownership needs no separate policy class; route-level permissions
+carry the rest of the matrix below. Laravel Policies are therefore not used.
+
+`property_access` on a membership (a list of property ids) is available for
+restricting a caretaker to specific properties via
+`OrganizationMember::accessiblePropertyIds()`. **This is not yet applied to
+queries** — a caretaker currently sees every property in their organization.
+
+The frontend hides UI elements for unauthorized actions (for UX), but this is
+**never** the security boundary. All authorization is enforced server-side.
 
 ## Roles
 

@@ -17,10 +17,14 @@ class BuildingStaffSeeder extends Seeder
     public function run(): void
     {
         $organization = Organization::first();
-        if (!$organization) return;
+        if (! $organization) {
+            return;
+        }
 
         $property = Property::where('organization_id', $organization->id)->first();
-        if (!$property) return;
+        if (! $property) {
+            return;
+        }
 
         // Use Case 1 & 2: Dedicated Caretaker & Dedicated Guard co-existing
         $caretaker = BuildingStaff::create([

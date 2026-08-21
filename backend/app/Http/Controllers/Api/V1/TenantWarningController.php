@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Models\Tenant;
 use App\Models\TenantWarning;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -41,16 +42,16 @@ class TenantWarningController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            'property_id' => 'required|exists:properties,id',
-            'unit_id' => 'nullable|exists:units,id',
-            'tenant_id' => 'required|exists:tenants,id',
+            'property_id' => ['required', $this->orgExists('properties')],
+            'unit_id' => ['nullable', $this->orgExists('units')],
+            'tenant_id' => ['required', $this->orgExists('tenants')],
             'title' => 'required|string|max:255',
             'damage_description' => 'required|string',
             'fine_amount' => 'required|numeric|min:0', // fine in BDT or raw poisha
             'issued_by_role' => 'required|string|in:caretaker,owner',
         ]);
 
-        $tenant = \App\Models\Tenant::findOrFail($validated['tenant_id']);
+        $tenant = Tenant::findOrFail($validated['tenant_id']);
         $finePoisha = (int) round($validated['fine_amount']);
 
         $warning = TenantWarning::create([

@@ -40,7 +40,7 @@ class ExternalVendorController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'property_id' => 'nullable|exists:properties,id',
+            'property_id' => ['nullable', $this->orgExists('properties')],
             'recorded_by_role' => 'required|string|in:caretaker,guard,owner',
             'recorded_by_name' => 'nullable|string|max:255',
             'vendor_name' => 'required|string|max:255',
@@ -52,7 +52,7 @@ class ExternalVendorController extends Controller
         ]);
 
         $organizationId = 1;
-        if (!empty($validated['property_id'])) {
+        if (! empty($validated['property_id'])) {
             $property = DB::table('properties')->where('id', $validated['property_id'])->first();
             if ($property) {
                 $organizationId = $property->organization_id;

@@ -1,5 +1,5 @@
 /**
- * Bariwala Hub — Core TypeScript Type Definitions
+ * BashaBari — Core TypeScript Type Definitions
  *
  * These types mirror the backend API response shapes.
  * They are the contract between frontend and backend.

@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\BuildingStaff;
-use App\Models\Expense;
 use App\Models\StaffDutyLog;
+use App\Services\Expense\ExpenseRecorder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -48,8 +48,8 @@ class BuildingStaffController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'property_id' => 'required|exists:properties,id',
-            'building_id' => 'nullable|exists:buildings,id',
+            'property_id' => ['required', $this->orgExists('properties')],
+            'building_id' => ['nullable', $this->orgExists('buildings')],
             'user_id' => 'nullable|exists:users,id',
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
@@ -142,9 +142,9 @@ class BuildingStaffController extends Controller
 
         $previousRole = $staff->staff_role;
 
-        $isCaretaker = isset($validated['is_caretaker']) ? (bool)$validated['is_caretaker'] : $staff->is_caretaker;
-        $isGuard = isset($validated['is_security_guard']) ? (bool)$validated['is_security_guard'] : $staff->is_security_guard;
-        $isOwner = isset($validated['is_owner_manager']) ? (bool)$validated['is_owner_manager'] : $staff->is_owner_manager;
+        $isCaretaker = isset($validated['is_caretaker']) ? (bool) $validated['is_caretaker'] : $staff->is_caretaker;
+        $isGuard = isset($validated['is_security_guard']) ? (bool) $validated['is_security_guard'] : $staff->is_security_guard;
+        $isOwner = isset($validated['is_owner_manager']) ? (bool) $validated['is_owner_manager'] : $staff->is_owner_manager;
 
         if ($isOwner) {
             $newRole = 'bariwala_manager';
@@ -192,7 +192,7 @@ class BuildingStaffController extends Controller
     /**
      * Process salary payment and record cash/MFS expense voucher.
      */
-    public function paySalary(Request $request, string $id): JsonResponse
+    public function paySalary(Request $request, string $id, ExpenseRecorder $recorder): JsonResponse
     {
         $staff = BuildingStaff::findOrFail($id);
 
@@ -202,36 +202,40 @@ class BuildingStaffController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $voucherNumber = 'EXP-' . date('Ym') . '-' . str_pad(rand(100, 999), 3, '0', STR_PAD_LEFT);
+        // One transaction: a recorded salary must never exist without its duty
+        // log, and vice versa.
+        $expense = DB::transaction(function () use ($staff, $validated, $recorder) {
+            $expense = $recorder->record([
+                'organization_id' => $staff->organization_id,
+                'property_id' => $staff->property_id,
+                'building_id' => $staff->building_id,
+                'category' => $staff->employment_type === 'agency_contracted'
+                    ? 'security_agency_fee'
+                    : 'staff_salary',
+                'amount' => $validated['amount'],
+                'vendor_name' => $staff->agency_name ?: $staff->name,
+                'payment_method' => $validated['payment_method'],
+                // `nullable` fields are absent from validated() when omitted,
+                // not null — indexing them directly throws.
+                'notes' => ($validated['notes'] ?? null)
+                    ?: "Monthly salary payment for {$staff->name} ({$staff->staff_role})",
+            ]);
 
-        // Record expense
-        $expense = Expense::create([
-            'organization_id' => $staff->organization_id,
-            'property_id' => $staff->property_id,
-            'building_id' => $staff->building_id,
-            'expense_number' => $voucherNumber,
-            'category' => $staff->employment_type === 'agency_contracted' ? 'security_agency_fee' : 'staff_salary',
-            'amount' => $validated['amount'],
-            'expense_date' => now()->toDateString(),
-            'vendor_name' => $staff->agency_name ?: $staff->name,
-            'payment_method' => $validated['payment_method'],
-            'receipt_reference' => $voucherNumber,
-            'notes' => $validated['notes'] ?: "Monthly salary payment for {$staff->name} ({$staff->staff_role})",
-        ]);
+            StaffDutyLog::create([
+                'building_staff_id' => $staff->id,
+                'action_type' => 'salary_paid',
+                'amount_paid' => $validated['amount'],
+                'payment_method' => $validated['payment_method'],
+                'voucher_number' => $expense->expense_number,
+                'notes' => "Salary payment processed via {$validated['payment_method']}. Voucher: {$expense->expense_number}",
+            ]);
 
-        // Record in duty logs
-        StaffDutyLog::create([
-            'building_staff_id' => $staff->id,
-            'action_type' => 'salary_paid',
-            'amount_paid' => $validated['amount'],
-            'payment_method' => $validated['payment_method'],
-            'voucher_number' => $voucherNumber,
-            'notes' => "Salary payment processed via {$validated['payment_method']}. Voucher: {$voucherNumber}",
-        ]);
+            return $expense;
+        });
 
         return response()->json([
             'message' => 'Salary payment recorded and expense voucher generated.',
-            'voucher_number' => $voucherNumber,
+            'voucher_number' => $expense->expense_number,
             'expense' => $expense,
         ]);
     }

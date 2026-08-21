@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Property;
 use App\Models\ScheduledMaintenance;
-use Carbon\Carbon;
+use App\Support\BusinessTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -21,7 +22,7 @@ class ScheduledMaintenanceController extends Controller
             $query->where('property_id', $request->property_id);
         }
 
-        $events = $query->where('scheduled_date', '>=', now()->toDateString())
+        $events = $query->where('scheduled_date', '>=', BusinessTime::todayString())
             ->orderBy('scheduled_date')
             ->get();
 
@@ -35,11 +36,11 @@ class ScheduledMaintenanceController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        $minDate = Carbon::today()->addDays(3)->toDateString();
+        $minDate = BusinessTime::daysFromTodayString(3);
 
         $validated = $request->validate([
-            'property_id' => 'required|exists:properties,id',
-            'building_id' => 'nullable|exists:buildings,id',
+            'property_id' => ['required', $this->orgExists('properties')],
+            'building_id' => ['nullable', $this->orgExists('buildings')],
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'maintenance_type' => 'required|string|in:water_tank_cleaning,elevator_servicing,generator_maintenance,electrical_overhaul,pest_control,painting,other',
@@ -52,7 +53,7 @@ class ScheduledMaintenanceController extends Controller
             'scheduled_date.after_or_equal' => 'Policy Error: Property maintenance must be scheduled at least 3 days in advance to notify tenants.',
         ]);
 
-        $property = \App\Models\Property::findOrFail($validated['property_id']);
+        $property = Property::findOrFail($validated['property_id']);
 
         $event = ScheduledMaintenance::create(array_merge($validated, [
             'organization_id' => $property->organization_id,

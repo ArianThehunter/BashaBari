@@ -1,5 +1,5 @@
 /**
- * Application-wide constants for Bariwala Hub.
+ * Application-wide constants for BashaBari.
  */
 
 // ---- Application ----

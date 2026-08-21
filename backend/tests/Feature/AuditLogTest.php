@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Building;
+use App\Models\Floor;
 use App\Models\Lease;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
@@ -36,13 +38,13 @@ class AuditLogTest extends TestCase
         ]);
 
         $property = Property::factory()->create(['organization_id' => $org->id]);
-        $building = \App\Models\Building::create([
+        $building = Building::create([
             'organization_id' => $org->id,
             'property_id' => $property->id,
             'name' => 'Main Tower',
             'total_floors' => 5,
         ]);
-        $floor = \App\Models\Floor::create([
+        $floor = Floor::create([
             'organization_id' => $org->id,
             'building_id' => $building->id,
             'floor_number' => 1,

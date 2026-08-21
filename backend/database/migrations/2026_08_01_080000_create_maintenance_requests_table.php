@@ -24,11 +24,11 @@ return new class extends Migration
             $table->string('category', 30)->default('repairs'); // 'plumbing', 'electrical', 'painting', 'elevator', 'cleaning', 'repairs', 'other'
             $table->string('priority', 20)->default('medium'); // 'low', 'medium', 'high', 'emergency'
             $table->string('status', 20)->default('pending'); // 'pending', 'in_progress', 'completed', 'cancelled'
-            
+
             $table->boolean('is_escalated_to_owner')->default(false);
             $table->string('escalated_by', 30)->nullable(); // 'tenant', 'caretaker'
             $table->text('escalation_reason')->nullable();
-            
+
             $table->bigInteger('estimated_cost_amount')->default(0); // In poisha
             $table->bigInteger('actual_cost_amount')->default(0); // In poisha
             $table->string('assigned_vendor_name')->nullable();

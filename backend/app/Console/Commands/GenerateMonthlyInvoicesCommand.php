@@ -6,6 +6,8 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Lease;
 use App\Models\Organization;
+use App\Services\Invoice\InvoiceNumberGenerator;
+use App\Support\BusinessTime;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -30,9 +32,9 @@ class GenerateMonthlyInvoicesCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(InvoiceNumberGenerator $numbers): int
     {
-        $today = Carbon::today('Asia/Dhaka');
+        $today = BusinessTime::today();
         $month = (int) ($this->option('month') ?: $today->month);
         $year = (int) ($this->option('year') ?: $today->year);
         $targetOrgId = $this->option('org');
@@ -57,10 +59,7 @@ class GenerateMonthlyInvoicesCommand extends Command
                 continue;
             }
 
-            $monthPadded = str_pad((string) $month, 2, '0', STR_PAD_LEFT);
-            $prefix = "INV-{$year}{$monthPadded}-";
-
-            DB::transaction(function () use ($leases, $org, $month, $year, $prefix, &$totalInvoicesGenerated) {
+            DB::transaction(function () use ($leases, $org, $month, $year, $numbers, &$totalInvoicesGenerated) {
                 foreach ($leases as $lease) {
                     $exists = Invoice::where('organization_id', $org->id)
                         ->where('lease_id', $lease->id)
@@ -72,12 +71,7 @@ class GenerateMonthlyInvoicesCommand extends Command
                         continue;
                     }
 
-                    $count = Invoice::where('organization_id', $org->id)
-                        ->where('invoice_number', 'like', "{$prefix}%")
-                        ->count();
-
-                    $seq = str_pad((string) ($count + 1), 3, '0', STR_PAD_LEFT);
-                    $invoiceNumber = "{$prefix}{$seq}";
+                    $invoiceNumber = $numbers->next($org->id, $year, $month);
 
                     $billingDay = min($lease->billing_day ?: 5, 28);
                     $issueDate = Carbon::createFromDate($year, $month, 1, 'Asia/Dhaka')->toDateString();

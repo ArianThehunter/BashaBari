@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Floor;
-use App\Models\OrganizationMember;
 use App\Models\Unit;
+use App\Support\OrganizationContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -16,29 +16,26 @@ class UnitController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $organizationId = $request->header('X-Organization-Id') ?: $request->query('organization_id');
-        $user = $request->user();
-
-        $member = OrganizationMember::where('user_id', $user->id)
-            ->where('status', 'active')
-            ->when($organizationId, fn ($q) => $q->where('organization_id', $organizationId))
-            ->first();
-
-        if (! $member) {
-            return response()->json(['message' => 'No active organization found.'], 400);
-        }
-
+        // Organization scoping is applied by the global scope; the middleware
+        // has already rejected a request without a resolvable organization.
         $units = Unit::query()
-            ->where('organization_id', $member->organization_id)
             ->when($request->query('property_id'), fn ($q, $id) => $q->where('property_id', $id))
             ->when($request->query('building_id'), fn ($q, $id) => $q->where('building_id', $id))
             ->when($request->query('unit_type'), fn ($q, $type) => $q->where('unit_type', $type))
             ->when($request->query('occupancy_status'), fn ($q, $status) => $q->where('occupancy_status', $status))
             ->with(['property', 'building', 'floor'])
-            ->get();
+            ->orderBy('unit_number')
+            ->paginate($request->integer('per_page', 50))
+            ->withQueryString();
 
         return response()->json([
-            'data' => $units,
+            'data' => $units->items(),
+            'meta' => [
+                'current_page' => $units->currentPage(),
+                'last_page' => $units->lastPage(),
+                'per_page' => $units->perPage(),
+                'total' => $units->total(),
+            ],
         ]);
     }
 
@@ -47,10 +44,9 @@ class UnitController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        $user = $request->user();
 
         $request->validate([
-            'floor_id' => ['required', 'exists:floors,id'],
+            'floor_id' => ['required', $this->orgExistsHard('floors')],
             'unit_number' => ['required', 'string', 'max:50'],
             'unit_type' => ['required', 'in:residential,commercial,garage,storage'],
             'occupancy_type' => ['nullable', 'in:tenant_occupied,flat_owner_occupied,bariwala_occupied'],
@@ -76,9 +72,6 @@ class UnitController extends Controller
         }
 
         $floor = Floor::query()
-            ->whereHas('organization.members', function ($query) use ($user) {
-                $query->where('user_id', $user->id)->where('status', 'active');
-            })
             ->with('building.property')
             ->findOrFail($request->floor_id);
 
@@ -86,16 +79,20 @@ class UnitController extends Controller
         $property = $building->property;
 
         $occupancyType = $request->occupancy_type ?: 'tenant_occupied';
-        
+
         // If flat owner or Bariwala lives in unit, base rent is ৳0
         $baseRentPoisha = in_array($occupancyType, ['flat_owner_occupied', 'bariwala_occupied']) ? 0 : (int) round($request->base_rent_amount);
 
         // Garage fee calculation: 1 Bike = ৳700 (70000 poisha), 1 Car = ৳1,200 (120000 poisha)
         $garageFeePoisha = ($bikeCount * 70000) + ($carCount * 120000);
         $garageType = 'none';
-        if ($bikeCount > 0 && $carCount > 0) $garageType = 'both';
-        else if ($bikeCount > 0) $garageType = 'bike';
-        else if ($carCount > 0) $garageType = 'car';
+        if ($bikeCount > 0 && $carCount > 0) {
+            $garageType = 'both';
+        } elseif ($bikeCount > 0) {
+            $garageType = 'bike';
+        } elseif ($carCount > 0) {
+            $garageType = 'car';
+        }
 
         // Mandatory Service Charge: ৳2,000 = 200,000 poisha for all units
         $serviceChargePoisha = $request->service_charge_amount !== null ? (int) round($request->service_charge_amount) : 200000;
@@ -130,13 +127,8 @@ class UnitController extends Controller
      */
     public function update(Request $request, string $id): JsonResponse
     {
-        $user = $request->user();
 
-        $unit = Unit::query()
-            ->whereHas('organization.members', function ($query) use ($user) {
-                $query->where('user_id', $user->id)->where('status', 'active');
-            })
-            ->findOrFail($id);
+        $unit = Unit::findOrFail($id);
 
         $request->validate([
             'unit_number' => ['required', 'string', 'max:50'],
@@ -157,9 +149,13 @@ class UnitController extends Controller
 
         $garageType = $request->garage_type ?: $unit->garage_type;
         $garageFeePoisha = 0;
-        if ($garageType === 'bike') $garageFeePoisha = 70000;
-        else if ($garageType === 'car') $garageFeePoisha = 120000;
-        else if ($garageType === 'both') $garageFeePoisha = 190000;
+        if ($garageType === 'bike') {
+            $garageFeePoisha = 70000;
+        } elseif ($garageType === 'car') {
+            $garageFeePoisha = 120000;
+        } elseif ($garageType === 'both') {
+            $garageFeePoisha = 190000;
+        }
 
         $serviceChargePoisha = $request->service_charge_amount !== null ? (int) round($request->service_charge_amount) : $unit->service_charge_amount;
 
@@ -189,13 +185,8 @@ class UnitController extends Controller
      */
     public function destroy(Request $request, string $id): JsonResponse
     {
-        $user = $request->user();
 
-        $unit = Unit::query()
-            ->whereHas('organization.members', function ($query) use ($user) {
-                $query->where('user_id', $user->id)->where('status', 'active');
-            })
-            ->findOrFail($id);
+        $unit = Unit::findOrFail($id);
 
         $unit->delete();
 
@@ -209,22 +200,23 @@ class UnitController extends Controller
      */
     public function reviseRent(Request $request, string $id): JsonResponse
     {
-        $user = $request->user();
+        $member = app(OrganizationContext::class)->member();
 
-        $organizationId = $request->header('X-Organization-Id') ?: $request->query('organization_id');
+        // `$member->role` is a BelongsTo relation, so the previous
+        // `in_array($member->role, ['owner', ...])` compared a Role model
+        // against strings and was always false — this endpoint could never
+        // succeed. Compare the role slug instead.
+        $allowedRoles = ['owner', 'bariwala', 'admin'];
 
-        $member = OrganizationMember::where('user_id', $user->id)
-            ->where('status', 'active')
-            ->when($organizationId, fn ($q) => $q->where('organization_id', $organizationId))
-            ->first();
-
-        if (! $member || ! in_array($member->role, ['owner', 'bariwala', 'admin'])) {
+        if (! $request->user()?->isPlatformAdmin()
+            && ! in_array($member?->roleSlug(), $allowedRoles, true)) {
             return response()->json([
                 'message' => 'Role Restricted: Only Property Owners (Bariwalas) can authorize rent increases under platform policy & Bangladesh law.',
             ], 403);
         }
 
-        $unit = Unit::where('organization_id', $member->organization_id)->findOrFail($id);
+        // Org-scoped by the global scope; a foreign unit id 404s.
+        $unit = Unit::findOrFail($id);
 
         $request->validate([
             'new_base_rent_amount' => ['required', 'numeric', 'min:0'],
@@ -252,6 +244,7 @@ class UnitController extends Controller
             $monthsSinceLastRevision = $unit->last_rent_revised_at->diffInMonths(now());
             if ($monthsSinceLastRevision < 24) {
                 $eligibleDate = $unit->last_rent_revised_at->addMonths(24)->format('d M, Y');
+
                 return response()->json([
                     'message' => "Statutory Cooling Period Active: Under Premises Rent Control Act 1992 of Bangladesh, rent revision is locked for 24 months from the previous agreement date. Next eligible date: {$eligibleDate}.",
                 ], 422);
@@ -284,4 +277,3 @@ class UnitController extends Controller
         ]);
     }
 }
-

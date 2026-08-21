@@ -7,6 +7,7 @@ use App\Models\Lease;
 use App\Models\OrganizationMember;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -76,8 +77,8 @@ class LeaseController extends Controller
         }
 
         $request->validate([
-            'unit_id' => ['required', 'exists:units,id'],
-            'tenant_id' => ['required', 'exists:tenants,id'],
+            'unit_id' => ['required', $this->orgExists('units')],
+            'tenant_id' => ['required', $this->orgExists('tenants')],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after:start_date'],
             'rent_amount' => ['required', 'numeric', 'min:0'], // Integer poisha
@@ -208,7 +209,7 @@ class LeaseController extends Controller
                 $lease->unit->update(['occupancy_status' => 'vacant']);
             }
 
-            \App\Services\AuditLogService::log('lease.terminated', $lease, [], $lease->toArray());
+            AuditLogService::log('lease.terminated', $lease, [], $lease->toArray());
 
             return response()->json([
                 'message' => 'Lease contract terminated successfully.',

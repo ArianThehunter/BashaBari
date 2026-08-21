@@ -18,11 +18,11 @@ return new class extends Migration
             $table->foreignId('building_id')->nullable()->constrained('buildings')->onDelete('cascade');
             $table->foreignId('unit_id')->nullable()->constrained('units')->onDelete('cascade');
             $table->foreignId('tenant_id')->constrained('tenants')->onDelete('cascade');
-            
+
             $table->date('intended_move_out_date');
             $table->text('reason_for_leaving')->nullable();
             $table->string('deposit_refund_account')->nullable(); // bKash / Nagad / Bank details for deposit return
-            
+
             $table->string('status', 30)->default('pending_inspection'); // 'pending_inspection', 'approved', 'deposit_refunded', 'completed'
             $table->text('caretaker_notes')->nullable();
             $table->timestamps();
