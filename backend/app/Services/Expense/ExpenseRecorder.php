@@ -124,6 +124,7 @@ class ExpenseRecorder
         $date = CarbonImmutable::parse($expenseDate);
 
         return $this->numbers->next(
+            $organizationId,
             Expense::query()
                 ->withoutGlobalScope('organization')
                 ->withTrashed()

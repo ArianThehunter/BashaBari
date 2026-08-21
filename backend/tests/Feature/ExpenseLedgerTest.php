@@ -14,6 +14,7 @@ use App\Support\BusinessTime;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class ExpenseLedgerTest extends TestCase
@@ -240,6 +241,40 @@ class ExpenseLedgerTest extends TestCase
         // All three carry a ledger entry.
         $this->assertSame(3, LedgerEntry::withoutGlobalScope('organization')
             ->whereNotNull('expense_id')->count());
+    }
+
+    public function test_the_sequence_query_is_valid_postgres(): void
+    {
+        // PostgreSQL rejects `SELECT MAX(...) ... FOR UPDATE` outright:
+        // "FOR UPDATE is not allowed with aggregate functions". SQLite compiles
+        // lockForUpdate() to nothing, so the tests pass locally and only CI
+        // catches it. Compiling against the Postgres grammar here catches it on
+        // either database. toSql() does not open a connection.
+        $pg = DB::build([
+            'driver' => 'pgsql',
+            'host' => '127.0.0.1',
+            'database' => 'unused',
+            'username' => 'unused',
+            'password' => 'unused',
+        ]);
+
+        $aggregate = $pg->table('expenses')
+            ->where('organization_id', 1)
+            ->where('expense_number', 'like', 'EXP-202608-%')
+            ->selectRaw('MAX(CAST(SUBSTR(expenses.expense_number, 12) AS INTEGER)) AS highest_sequence')
+            ->toSql();
+
+        $this->assertStringNotContainsString(
+            'for update',
+            strtolower($aggregate),
+            'The sequence read must not lock: Postgres rejects FOR UPDATE on an aggregate.',
+        );
+
+        // The lock moved to the organization row, which is a plain row select.
+        $lock = $pg->table('organizations')->where('id', 1)->lockForUpdate()->toSql();
+
+        $this->assertStringContainsString('for update', strtolower($lock));
+        $this->assertStringNotContainsString('max(', strtolower($lock));
     }
 
     public function test_numbering_is_independent_per_organization(): void

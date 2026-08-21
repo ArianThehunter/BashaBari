@@ -23,6 +23,7 @@ class InvoiceNumberGenerator
     public function next(int $organizationId, int $year, int $month): string
     {
         return $this->numbers->next(
+            $organizationId,
             $this->scope($organizationId),
             'invoice_number',
             $this->prefix($year, $month),
@@ -35,6 +36,7 @@ class InvoiceNumberGenerator
     public function nextBatch(int $organizationId, int $year, int $month, int $count): array
     {
         return $this->numbers->nextBatch(
+            $organizationId,
             $this->scope($organizationId),
             'invoice_number',
             $this->prefix($year, $month),
