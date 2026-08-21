@@ -1,5 +1,5 @@
 /**
- * Money formatting utilities for Bariwala Hub.
+ * Money formatting utilities for BashaBari.
  *
  * Strategy:
  * - All monetary values from the API are in POISHA (integer, 1 BDT = 100 poisha).

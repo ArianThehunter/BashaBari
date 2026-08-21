@@ -83,7 +83,7 @@ export default function InvoiceDetailPrintablePage() {
             <div className="space-y-1">
               <h2 className="text-xl font-extrabold text-primary flex items-center gap-2">
                 <Building2 className="w-6 h-6" />
-                {invoice.organization?.name || "Bariwala Hub Property Management"}
+                {invoice.organization?.name || "BashaBari Property Management"}
               </h2>
               {invoice.organization?.address && (
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -216,7 +216,7 @@ export default function InvoiceDetailPrintablePage() {
                 </div>
               )}
               <div className="pt-2 text-[10px]">
-                <p>Computer-generated digital invoice issued by Bariwala Hub SaaS.</p>
+                <p>Computer-generated digital invoice issued by BashaBari.</p>
               </div>
             </div>
 

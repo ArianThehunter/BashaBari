@@ -1,5 +1,5 @@
 /**
- * Date and time formatting utilities for Bariwala Hub.
+ * Date and time formatting utilities for BashaBari.
  *
  * Strategy:
  * - Timestamps from the API are always UTC (ISO 8601).

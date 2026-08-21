@@ -82,7 +82,7 @@ function SslcommerzCheckoutContent() {
                 <h1 className="text-lg font-black tracking-tight flex items-center gap-2">
                   SSLCommerz Secure Checkout
                 </h1>
-                <p className="text-xs text-slate-400">Merchant: Bariwala Hub Property Management</p>
+                <p className="text-xs text-slate-400">Merchant: BashaBari Property Management</p>
               </div>
             </div>
 
