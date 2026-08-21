@@ -16,6 +16,7 @@ class Expense extends Model
     protected $fillable = [
         'organization_id',
         'property_id',
+        'building_id',
         'unit_id',
         'maintenance_request_id',
         'expense_number',

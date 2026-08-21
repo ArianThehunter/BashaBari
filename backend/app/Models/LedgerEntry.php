@@ -15,6 +15,7 @@ class LedgerEntry extends Model
         'organization_id',
         'payment_id',
         'invoice_id',
+        'expense_id',
         'type',
         'category',
         'amount',
