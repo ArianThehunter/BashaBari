@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\OrganizationMember;
 use App\Models\Tenant;
 use App\Services\AuditLogService;
+use App\Support\BusinessTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -205,7 +206,7 @@ class TenantController extends Controller
                 'property_name' => $activeLease?->unit?->property?->name ?: 'BashaBari Building',
                 'address' => $activeLease?->unit?->property?->address ?: 'Dhaka, Bangladesh',
                 'unit_number' => $activeLease?->unit?->unit_number ?: 'N/A',
-                'rent_start_date' => $activeLease?->start_date ?: now()->toDateString(),
+                'rent_start_date' => $activeLease?->start_date ?: BusinessTime::todayString(),
             ],
         ]);
     }

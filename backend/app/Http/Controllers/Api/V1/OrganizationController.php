@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\Role;
-use Carbon\Carbon;
+use App\Support\BusinessTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -56,7 +56,7 @@ class OrganizationController extends Controller
         }
 
         // BD-001: 5-day trial period from creation date
-        $trialEndsAt = Carbon::today('Asia/Dhaka')->addDays(5);
+        $trialEndsAt = BusinessTime::today()->addDays(5);
 
         $organization = Organization::create([
             'name' => $request->name,

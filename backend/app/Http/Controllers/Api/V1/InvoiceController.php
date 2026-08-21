@@ -8,6 +8,7 @@ use App\Models\InvoiceItem;
 use App\Models\Lease;
 use App\Models\OrganizationMember;
 use App\Services\Invoice\InvoiceNumberGenerator;
+use App\Support\BusinessTime;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -38,7 +39,7 @@ class InvoiceController extends Controller
         // Auto-update overdue status for past due unpaid invoices
         Invoice::where('organization_id', $member->organization_id)
             ->whereIn('status', ['unpaid', 'partially_paid'])
-            ->where('due_date', '<', Carbon::today()->toDateString())
+            ->where('due_date', '<', BusinessTime::todayString())
             ->update(['status' => 'overdue']);
 
         $query = Invoice::query()

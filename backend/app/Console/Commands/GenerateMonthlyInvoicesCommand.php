@@ -7,6 +7,7 @@ use App\Models\InvoiceItem;
 use App\Models\Lease;
 use App\Models\Organization;
 use App\Services\Invoice\InvoiceNumberGenerator;
+use App\Support\BusinessTime;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -33,7 +34,7 @@ class GenerateMonthlyInvoicesCommand extends Command
      */
     public function handle(InvoiceNumberGenerator $numbers): int
     {
-        $today = Carbon::today('Asia/Dhaka');
+        $today = BusinessTime::today();
         $month = (int) ($this->option('month') ?: $today->month);
         $year = (int) ($this->option('year') ?: $today->year);
         $targetOrgId = $this->option('org');

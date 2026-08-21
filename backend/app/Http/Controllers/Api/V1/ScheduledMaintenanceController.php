@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Property;
 use App\Models\ScheduledMaintenance;
-use Carbon\Carbon;
+use App\Support\BusinessTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -22,7 +22,7 @@ class ScheduledMaintenanceController extends Controller
             $query->where('property_id', $request->property_id);
         }
 
-        $events = $query->where('scheduled_date', '>=', now()->toDateString())
+        $events = $query->where('scheduled_date', '>=', BusinessTime::todayString())
             ->orderBy('scheduled_date')
             ->get();
 
@@ -36,7 +36,7 @@ class ScheduledMaintenanceController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        $minDate = Carbon::today()->addDays(3)->toDateString();
+        $minDate = BusinessTime::daysFromTodayString(3);
 
         $validated = $request->validate([
             'property_id' => ['required', $this->orgExists('properties')],

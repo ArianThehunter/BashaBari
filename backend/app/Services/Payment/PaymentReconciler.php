@@ -5,7 +5,8 @@ namespace App\Services\Payment;
 use App\Models\Invoice;
 use App\Models\LedgerEntry;
 use App\Models\Payment;
-use Carbon\Carbon;
+use App\Support\BusinessTime;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -23,9 +24,9 @@ class PaymentReconciler
      * month, so an attacker could enumerate live transactions, and collisions
      * were near-certain at any real volume.
      */
-    public static function newTransactionId(?Carbon $date = null): string
+    public static function newTransactionId(?CarbonInterface $date = null): string
     {
-        $date ??= Carbon::now('Asia/Dhaka');
+        $date ??= BusinessTime::now();
 
         return 'TRX-'.$date->format('Ym').'-'.strtoupper(Str::random(4)).'-'.Str::uuid()->toString();
     }
@@ -59,7 +60,7 @@ class PaymentReconciler
                 'type' => 'income',
                 'category' => 'rent',
                 'amount' => $locked->amount,
-                'entry_date' => $locked->payment_date ?? Carbon::today('Asia/Dhaka')->toDateString(),
+                'entry_date' => $locked->payment_date ?? BusinessTime::todayString(),
                 'description' => $description
                     ?? "Rent payment ({$locked->payment_method}) — Tran #: {$locked->transaction_number}",
             ]);
