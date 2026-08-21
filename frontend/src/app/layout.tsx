@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { Geist_Mono } from "next/font/google";
 import { QueryProvider } from "@/providers/query-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 const inter = Inter({
@@ -92,6 +93,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <QueryProvider>{children}</QueryProvider>
         </ThemeProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
