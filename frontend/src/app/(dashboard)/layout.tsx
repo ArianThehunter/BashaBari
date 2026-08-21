@@ -20,7 +20,10 @@ import {
   Users,
   Home,
   FileText,
-  DollarSign,
+  DoorOpen,
+  Wallet,
+  Banknote,
+  TrendingUp,
   Wrench,
   BarChart3,
   Settings,
@@ -28,12 +31,17 @@ import {
   ChevronDown,
   Plus,
   Loader2,
-  ShieldCheck,
+  HardHat,
+  UserCog,
+  History,
   Receipt,
   Zap,
   Scale,
   BookOpen,
 } from "lucide-react";
+import { LanguageToggle } from "@/components/language-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { useLanguage } from "@/providers/language-provider";
 
 const emptySubscribe = () => () => {};
 
@@ -47,6 +55,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     selectOrganization,
     isLoadingOrganizations,
   } = useOrganization();
+
+  const { t } = useLanguage();
 
   const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
@@ -90,22 +100,48 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  const navItems = [
-    { href: "/dashboard", label: "Dashboard", icon: Home },
-    { href: "/dashboard/guide", label: "User Guide & Tutorial", icon: BookOpen },
-    { href: "/properties", label: "Properties", icon: Building2 },
-    { href: "/tenants", label: "Tenants", icon: Users },
-    { href: "/leases", label: "Leases", icon: FileText },
-    { href: "/invoices", label: "Rent & Invoices", icon: Receipt },
-    { href: "/utilities", label: "Utilities & Meters", icon: Zap },
-    { href: "/expenses", label: "Expenses", icon: DollarSign },
-    { href: "/maintenance", label: "Maintenance", icon: Wrench },
-    { href: "/building-staff", label: "Building Staff & Security", icon: ShieldCheck },
-    { href: "/reports", label: "Reports & Analytics", icon: BarChart3 },
-    { href: "/settings/organization", label: "Org Settings", icon: Settings },
-    { href: "/settings/members", label: "Team Members", icon: ShieldCheck },
-    { href: "/settings/audit-logs", label: "Security Audit Logs", icon: ShieldCheck },
-    { href: "/settings/compliance", label: "Legal Compliance", icon: Scale },
+  // Grouped by what a landlord is trying to do, not by database table. Every
+  // item has a distinct icon — Building Staff, Team Members and Audit Logs all
+  // used ShieldCheck, so the sidebar could not be scanned by shape.
+  const navGroups = [
+    {
+      label: t.nav.groupEveryday,
+      items: [
+        { href: "/dashboard", label: t.nav.dashboard, icon: Home },
+        { href: "/maintenance", label: t.nav.maintenance, icon: Wrench },
+        { href: "/dashboard/guide", label: t.nav.guide, icon: BookOpen },
+      ],
+    },
+    {
+      label: t.nav.groupMoney,
+      items: [
+        { href: "/invoices", label: t.nav.invoices, icon: Receipt },
+        { href: "/payments", label: t.nav.payments, icon: Banknote },
+        { href: "/utilities", label: t.nav.utilities, icon: Zap },
+        { href: "/expenses", label: t.nav.expenses, icon: Wallet },
+        { href: "/financials", label: t.nav.financials, icon: TrendingUp },
+        { href: "/reports", label: t.nav.reports, icon: BarChart3 },
+      ],
+    },
+    {
+      label: t.nav.groupProperty,
+      items: [
+        { href: "/properties", label: t.nav.properties, icon: Building2 },
+        { href: "/units", label: t.nav.units, icon: DoorOpen },
+        { href: "/tenants", label: t.nav.tenants, icon: Users },
+        { href: "/leases", label: t.nav.leases, icon: FileText },
+        { href: "/building-staff", label: t.nav.staff, icon: HardHat },
+      ],
+    },
+    {
+      label: t.nav.groupAdmin,
+      items: [
+        { href: "/settings/organization", label: t.nav.organization, icon: Settings },
+        { href: "/settings/members", label: t.nav.members, icon: UserCog },
+        { href: "/settings/compliance", label: t.nav.compliance, icon: Scale },
+        { href: "/settings/audit-logs", label: t.nav.auditLogs, icon: History },
+      ],
+    },
   ];
 
   return (
@@ -136,7 +172,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
                 <DropdownMenuContent align="start" className="w-56">
                   <DropdownMenuLabel className="text-xs text-muted-foreground">
-                    Switch Organization
+                    {t.nav.switchOrganization}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
 
@@ -160,7 +196,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   <DropdownMenuItem asChild>
                     <Link href="/onboarding" className="gap-2 cursor-pointer text-primary">
                       <Plus className="w-4 h-4" />
-                      <span>Add New Organization</span>
+                      <span>{t.nav.addOrganization}</span>
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -169,7 +205,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               {/* 5-day Trial Badge */}
               {activeOrganization.status === "trial" && (
                 <Badge variant="outline" className="hidden md:inline-flex bg-amber-500/10 text-amber-600 border-amber-500/20 text-xs gap-1">
-                  <span>⚡ 5-Day Trial</span>
+                  <span>⚡ {t.nav.trial}</span>
                 </Badge>
               )}
             </div>
@@ -177,7 +213,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
 
         {/* ---- Right User Profile Menu ---- */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <LanguageToggle />
+          <ThemeToggle className="hidden sm:inline-flex" />
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="gap-2">
@@ -198,14 +237,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
               <DropdownMenuItem asChild>
                 <Link href="/settings/organization" className="cursor-pointer">
-                  <Settings className="w-4 h-4 mr-2" /> Settings
+                  <Settings className="w-4 h-4 mr-2" /> {t.nav.settings}
                 </Link>
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
 
               <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-destructive focus:text-destructive">
-                <LogOut className="w-4 h-4 mr-2" /> Sign Out
+                <LogOut className="w-4 h-4 mr-2" /> {t.nav.signOut}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -215,31 +254,37 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* ---- Main Body Shell ---- */}
       <div className="flex-1 flex overflow-hidden">
         {/* ---- Left Sidebar Navigation ---- */}
-        <aside className="w-64 bg-card border-r border-border hidden md:flex flex-col p-4 space-y-1">
-          <div className="px-3 py-2 text-xs font-bold text-muted-foreground tracking-wider uppercase">
-            Navigation
-          </div>
+        <aside className="w-64 bg-card border-r border-border hidden md:flex flex-col overflow-y-auto">
+          <nav className="flex-1 p-3 space-y-5">
+            {navGroups.map((group) => (
+              <div key={group.label} className="space-y-1">
+                <div className="px-3 pb-1 text-[11px] font-bold text-muted-foreground tracking-wider uppercase">
+                  {group.label}
+                </div>
 
-          <nav className="space-y-1 flex-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive =
+                    pathname === item.href || pathname.startsWith(`${item.href}/`);
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-primary text-primary-foreground shadow-xs font-semibold"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                  }`}
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-current={isActive ? "page" : undefined}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        isActive
+                          ? "bg-primary text-primary-foreground shadow-xs font-semibold"
+                          : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 shrink-0" aria-hidden />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
           </nav>
         </aside>
 

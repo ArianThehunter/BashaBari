@@ -6,6 +6,8 @@ import { useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageToggle } from "@/components/language-toggle";
+import { useLanguage } from "@/providers/language-provider";
 import { Home, Receipt, Wrench, LogOut, Loader2, UserCheck, ArrowLeft, Building2, BookOpen } from "lucide-react";
 
 const emptySubscribe = () => () => {};
@@ -14,6 +16,7 @@ export default function TenantPortalLayout({ children }: { children: ReactNode }
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, isLoading: isLoadingAuth, logout } = useAuth();
+  const { t } = useLanguage();
   const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
   useEffect(() => {
@@ -34,10 +37,10 @@ export default function TenantPortalLayout({ children }: { children: ReactNode }
   }
 
   const navItems = [
-    { href: "/tenant-portal", label: "Tenant Dashboard", icon: Home },
-    { href: "/tenant-portal/invoices", label: "My Rent & Invoices", icon: Receipt },
-    { href: "/tenant-portal/maintenance", label: "Maintenance Tickets", icon: Wrench },
-    { href: "/tenant-portal/guide", label: "User Guide & Tutorial", icon: BookOpen },
+    { href: "/tenant-portal", label: t.portal.home, icon: Home },
+    { href: "/tenant-portal/invoices", label: t.portal.invoices, icon: Receipt },
+    { href: "/tenant-portal/maintenance", label: t.portal.maintenance, icon: Wrench },
+    { href: "/tenant-portal/guide", label: t.portal.guide, icon: BookOpen },
   ];
 
   return (
@@ -47,7 +50,7 @@ export default function TenantPortalLayout({ children }: { children: ReactNode }
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors mr-2">
             <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Back to</span> Main Site
+            <span>{t.portal.backToSite}</span>
           </Link>
 
           <div className="h-4 w-[1px] bg-border hidden sm:block" />
@@ -56,14 +59,14 @@ export default function TenantPortalLayout({ children }: { children: ReactNode }
             <span className="bg-primary text-primary-foreground w-8 h-8 rounded-lg flex items-center justify-center text-sm shadow-sm shrink-0">
               🏠
             </span>
-            <span className="tracking-tight">BashaBari Tenant Portal</span>
+            <span className="tracking-tight">{t.portal.title}</span>
           </Link>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
           <Button asChild variant="ghost" size="sm" className="hidden md:inline-flex text-xs font-semibold">
             <Link href="/tenant-portal/guide">
-              <BookOpen className="w-3.5 h-3.5 mr-1" /> User Guide
+              <BookOpen className="w-3.5 h-3.5 mr-1" /> {t.portal.guide}
             </Link>
           </Button>
 
@@ -72,10 +75,11 @@ export default function TenantPortalLayout({ children }: { children: ReactNode }
             <span>{user?.name}</span>
           </div>
 
-          <ThemeToggle />
+          <LanguageToggle />
+          <ThemeToggle className="hidden sm:inline-flex" />
 
           <Button variant="outline" size="sm" onClick={() => logout()} className="text-xs font-semibold">
-            <LogOut className="w-3.5 h-3.5 mr-1" /> Logout
+            <LogOut className="w-3.5 h-3.5 mr-1" /> {t.portal.logout}
           </Button>
         </div>
       </header>
@@ -109,7 +113,7 @@ export default function TenantPortalLayout({ children }: { children: ReactNode }
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all font-medium"
             >
               <Building2 className="w-3.5 h-3.5" />
-              <span>BashaBari Homepage</span>
+              <span>{t.portal.homepage}</span>
             </Link>
           </div>
         </aside>
